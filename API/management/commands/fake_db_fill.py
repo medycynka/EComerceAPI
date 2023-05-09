@@ -10,10 +10,13 @@ class Command(BaseCommand):
     skip_checks = True
 
     def add_arguments(self, parser):
-        parser.add_argument('batch_size', nargs=1, type=int)
-        parser.add_argument('-ub', '--user_batch_size', nargs=1, type=int, default=0)
-        parser.add_argument('-u', '--users', action='store_true', default=False)
-        parser.add_argument('-oo', '--only_orders', action='store_true', default=False)
+        parser.add_argument('batch_size', nargs=1, type=int,
+                            help="Number of record to generate for each model to create")
+        parser.add_argument('-ub', '--user_batch_size', nargs=1, type=int, default=0,
+                            help="Number of user models to create")
+        parser.add_argument('-u', '--users', action='store_true', default=False,
+                            help="Create user models")
+        parser.add_argument('-oo', '--only_orders', action='store_true', default=False, help="Create only Order models")
 
     def handle(self, *args, **options):
         if options['users']:
