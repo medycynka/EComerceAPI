@@ -1,0 +1,168 @@
+{% extends 'basic.html' %}
+{% load static custom_project_templatetags %}
+{% load static %}
+{% block styles_content %}
+    <style>
+        .select2{
+            width: 100% !important;
+        }
+    </style>
+{% endblock %}
+{% block page_header_title %}
+    Top sellers
+{% endblock %}
+{% block page_breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Products</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'products_top_sellers_list' %}">Top sellers</a></li>
+    {% csrf_token %}
+{% endblock %}
+{% block page_header_buttons %}
+    {% if request.user|is_seller or request.user.is_superuser %}
+        <div class="ms-auto pageheader-btn">
+            <a href="{% url 'product_create' %}" class="btn btn-primary btn-icon text-white me-2">
+                <span>
+                    <i class="fe fe-plus"></i>
+                </span> Add product
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+{% block page_content %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card custom-card">
+                <div class="card-header">
+                    <div class="row w-100">
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label class="form-label">From date</label>
+                                <div class="input-group">
+                                    <input type="datetime-local" class="form-control" placeholder="Filter from date" id="fromDateFilter">
+                                    <span class="input-group-text btn btn-primary" id="fromDateFilterBtn"><i class="fe fe-search"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="form-group">
+                                <label class="form-label">To date</label>
+                                <div class="input-group">
+                                    <input type="datetime-local" class="form-control" placeholder="Filter to date" id="toDateFilter">
+                                    <span class="input-group-text btn btn-primary" id="toDateFilterBtn"><i class="fe fe-search"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="form-group">
+                                <label class="form-label">Records count</label>
+                                <select name="limit" id="resultsLimitSelect">
+                                    <option value="" selected>----------</option>
+                                    <option value="1">1</option>
+                                    <option value="10">10</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="form-group">
+                                <label class="form-label">&emsp;</label>
+                                <div class="input-group">
+                                    <button type="button" class="btn btn-primary" onclick="filterProducts()" style="width: 100%;"><i class="fa fa-search"></i>&emsp;Apply filters</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table border table-striped mg-b-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Sells count</th>
+                                    <th>Overall profit</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_scripts %}
+    <!-- INTERNAL ion.rangeSlider.min js -->
+    <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
+
+    <!-- INTERNAL moment.min js -->
+    <script src="{% static 'assets/plugins/datatable/moment/moment.min.js' %}"></script>
+
+    <script>
+        const tableBodyContainer = $("table.table>tbody");
+        const limitSelect = $('select#resultsLimitSelect');
+        const fromDateFilter = $('#fromDateFilter');
+        const toDateFilter = $('#toDateFilter');
+
+        limitSelect.select2({
+            minimumResultsForSearch: Infinity,
+        });
+
+        function getAllFiltersData() {
+            const fromDate = fromDateFilter[0].value;
+            const toDate = toDateFilter[0].value;
+
+            return {
+                'date_from': fromDate !== '' ? moment(fromDate).format('DD-MM-YYYY hh:mm:ss') : '',
+                'date_to': toDate !== '' ? moment(toDate).format('DD-MM-YYYY hh:mm:ss') : '',
+                'limit': limitSelect[0].value,
+            }
+        }
+
+        function filterProducts(){
+            const filterData = getAllFiltersData();
+            reloadProductsList(filterData);
+
+            return false
+        }
+
+        function reloadProductsList(filters) {
+            $.ajax({
+                url: "{% url 'api_products_top_sellers_list' %}",
+                data: filters,
+                type: 'GET',
+                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                contentType : 'application/json',
+                processData : true,
+                success: (data, textStatus, jqXHR) => {
+                    const itemsCount = data.results.length;
+                    const detailUrl = '{% url 'products_list' %}';
+                    tableBodyContainer.empty();
+
+                    for (let i = 0; i < itemsCount; i++) {
+                        tableBodyContainer.append($(
+                            `<tr>
+                                <td>${data.results[i].name}</td>
+                                <td>${data.results[i].category.name}</td>
+                                <td>${data.results[i].price} PLN</td>
+                                <td>${data.results[i].sells_count}</td>
+                                <td>${(data.results[i].price * data.results[i].sells_count).toFixed(2)} PLN</td>
+                                <td><a href="${detailUrl}${data.results[i].id}/"><i class="zmdi zmdi-globe"></i></a></td>
+                            </tr>`
+                        ));
+                    }
+                },
+                error: (jqXHR, textStatus, errorThrown) => {
+                    console.log(jqXHR, textStatus, errorThrown);
+                },
+            })
+        }
+
+        reloadProductsList(null);
+    </script>
+{% endblock %}

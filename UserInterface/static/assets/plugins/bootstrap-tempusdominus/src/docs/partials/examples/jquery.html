@@ -1,0 +1,140 @@
+<page-body>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js'
+          integrity='sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=='
+          crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+  <script src='/6/js/jQuery-provider.js'></script>
+
+  <section>
+    <p>
+      This page outlines using the picker with jQuery. The <code>jQuery-provider.js</code> file must be included after
+      the
+      main picker code. jQuery is no longer a requirement and is here for backwards compatibility.
+    </p>
+    <p>
+      It's highly recommend to use the native methods as jQuery will be dropped completely in the future.
+    </p>
+    <p>
+      The events are slightly different with jQuery. Using the native methods events return as <code>event.detail.[date|oldDate|etc]</code>.
+      With jQuery, you will access those values <code>e.[date|oldDate|ect]</code>.
+    </p>
+  </section>
+
+  <section>
+    <h3 id='simple-setup'>Simple Setup <a class='anchor-link ' aria-label='Anchor' href='#simple-setup'><i
+      class='fas fa-anchor' aria-hidden="true"></i></a> <small class='show-code' title='View Code'><i class='fas fa-code' aria-hidden="true"></i></small>
+      <a aria-label='stackblitz' href='https://stackblitz.com/edit/tempus-dominus-v6-simple-jquery-setup?file=index.html'
+         title='Stackblitz example'>
+        <i class="fa-solid fa-bolt" aria-hidden="true"></i></a>
+    </h3>
+    
+    <p>
+      This is the simplest setup you can have with Bootstrap and Font Awesome 5. The picker defaults to FA 5 Solid
+      icons, however you can overwrite the defaults globally.
+    </p>
+
+    <div class='code-blocks d-none'>
+      <ul class='nav nav-tabs' role='tablist'>
+        <li class='nav-item' role='presentation'>
+          <button class='nav-link active' id='datetimepicker1Html-tab' data-bs-toggle='tab'
+                  data-bs-target='#datetimepicker1Html' type='button'
+                  role='tab' aria-controls='datetimepicker1Html' aria-selected='true'>HTML
+          </button>
+        </li>
+        <li class='nav-item' role='presentation'>
+          <button class='nav-link' id='datetimepicker1Js-tab' data-bs-toggle='tab' data-bs-target='#datetimepicker1Js'
+                  type='button'
+                  role='tab' aria-controls='datetimepicker1Js' aria-selected='false'>Javascript
+          </button>
+        </li>
+        <li class='nav-item' role='presentation'>
+          <button class='nav-link' id='datetimepicker1Log-tab' data-bs-toggle='tab' data-bs-target='#datetimepicker1Log'
+                  type='button'
+                  role='tab' aria-controls='datetimepicker1Log' aria-selected='false'>Events
+          </button>
+        </li>
+      </ul>
+      <div class='tab-content'>
+        <div class='tab-pane fade show active' id='datetimepicker1Html' role='tabpanel'
+             aria-labelledby='datetimepicker1Html-tab'>
+         <pre>
+           <code class='language-html'>
+ &lt;div
+     class='input-group'
+     id='datetimepicker1'
+     data-td-target-input='nearest'
+     data-td-target-toggle='nearest'
+ &gt;
+   &lt;input
+     id='datetimepicker1Input'
+     type='text'
+     class='form-control'
+     data-td-target='#datetimepicker1'
+   /&gt;
+   &lt;span
+     class='input-group-text'
+     data-td-target='#datetimepicker1'
+     data-td-toggle='datetimepicker'
+   &gt;
+     &lt;span class='fas fa-calendar'&gt;&lt;/span&gt;
+   &lt;/span&gt;
+ &lt;/div&gt;
+           </code>
+         </pre>
+        </div>
+        <div class='tab-pane fade' id='datetimepicker1Js' role='tabpanel' aria-labelledby='datetimepicker1Js-tab'>
+         <pre>
+           <code class='language-javascript'>
+ $('#datetimepicker1').tempusDominus();
+           </code>
+         </pre>
+        </div>
+        <div class='tab-pane fade logger' id='datetimepicker1Log' role='tabpanel'
+             aria-labelledby='datetimepicker1Log-tab'>
+          <div class='alert alert-info'>
+            Events will display as you manipulate the picker.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class='container'>
+      <div class='row'>
+        <div class='col-sm-6'>
+          <label for='datetimepicker1Input' class='form-label'>Simple picker</label>
+          <div
+            class='input-group log-event'
+            id='datetimepicker1'
+            data-td-target-input='nearest'
+            data-td-target-toggle='nearest'
+          >
+            <input
+              id='datetimepicker1Input'
+              type='text'
+              class='form-control'
+              data-td-target='#datetimepicker1'
+            />
+            <span
+              class='input-group-text'
+              data-td-target='#datetimepicker1'
+              data-td-toggle='datetimepicker'
+            >
+               <span class='fas fa-calendar'></span>
+             </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type='text/javascript'>
+      $('#datetimepicker1').tempusDominus();
+    </script>
+  </section>
+</page-body>
+
+<page-meta>
+  <title>Examples using jQuery</title>
+  <post-date>07/08/2021</post-date>
+  <update-date>02/05/2022</update-date>
+  <excerpt>How to use Tempus Dominus datetime picker with jquery
+  </excerpt>
+  <tags>datepicker, javascript, open source, tempus dominus, eonasdan</tags>
+</page-meta>

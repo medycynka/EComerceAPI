@@ -1,0 +1,20 @@
+<!-- PAGE-HEADER -->
+                            <div class="page-header">
+                                <div>
+                                    <h1 class="page-title">
+                                        {% block page_header_title %}
+                                        {% endblock %}
+                                    </h1>
+                                    {% block breadcrumbs_wrapper %}
+                                        {% if use_breadcrumbs|yesno:'t,n,t' == 't' %}
+                                            <ol class="breadcrumb">
+                                                <li class="breadcrumb-item"><a href="{% url 'platform_home' %}">Home</a></li>
+                                                {% block page_breadcrumbs %}{% endblock %}
+                                            </ol>
+                                        {% endif %}
+                                    {% endblock %}
+                                </div>
+                                {% block page_header_buttons %}
+                                {% endblock %}
+                            </div>
+                            <!-- PAGE-HEADER END -->

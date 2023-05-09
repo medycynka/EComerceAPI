@@ -1,0 +1,132 @@
+{% extends 'basic.html' %}
+{% load static custom_project_templatetags %}
+{% load static %}
+{% block styles_content %}
+    <style>
+        .select2{
+            width: 100% !important;
+        }
+    </style>
+{% endblock %}
+{% block page_header_title %}
+    {% if request.user|is_client %}
+        My orders
+    {% else %}
+        Orders
+    {% endif %}
+{% endblock %}
+{% block page_breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Products</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'orders_list' %}">Orders</a></li>
+    {% csrf_token %}
+{% endblock %}
+{% block page_header_buttons %}
+    {% if request.user|is_client or request.user.is_superuser %}
+        <div class="ms-auto pageheader-btn">
+            <a href="{% url 'order_create' %}" class="btn btn-primary btn-icon text-white me-2">
+                <span>
+                    <i class="fe fe-plus"></i>
+                </span> Add order
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+{% block page_content %}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card custom-card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table border table-striped text-center mg-b-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Client</th>
+                                    <th>Total price</th>
+                                    <th>Order address</th>
+                                    <th>Order date</th>
+                                    <th>Payment deadline</th>
+                                    <th>Is paid</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="mb-5">
+                        <div class="float-end">
+                            <ul class="pagination ">
+                                <li class="page-item page-prev">
+                                    <a class="page-link" href="javascript:void(0);" onclick="reloadOrdersList(this.dataset['nextPageLink'])" tabindex="-1">Prev</a>
+                                </li>
+                                <li class="page-item page-next">
+                                    <a class="page-link" href="javascript:void(0);" onclick="reloadOrdersList(this.dataset['prevPageLink'])">Next</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_scripts %}
+    <!-- INTERNAL moment.min js -->
+    <script src="{% static 'assets/plugins/datatable/moment/moment.min.js' %}"></script>
+
+    <script>
+        const tableBodyContainer = $("table.table>tbody");
+        const nextPageBtn = $('.page-next>.page-link');
+        const prevPageBtn = $('.page-prev>.page-link');
+
+        function reloadOrdersList(url) {
+            $.ajax({
+                url: url || "{% url 'api_orders_list' %}",
+                data: null,
+                type: 'GET',
+                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                contentType : 'application/json',
+                processData : true,
+                success: (data, textStatus, jqXHR) => {
+                    console.log(data);
+                    if (data.previous) {
+                        prevPageBtn.parent().removeClass('disabled');
+                        prevPageBtn.attr('data-next-page-link', data.previous)
+                    } else {
+                        !prevPageBtn.parent().hasClass('disabled') && prevPageBtn.parent().addClass('disabled')
+                    }
+                    if (data.next) {
+                        nextPageBtn.parent().removeClass('disabled');
+                        nextPageBtn.attr('data-prev-page-link', data.next)
+                    } else {
+                        !nextPageBtn.parent().hasClass('disabled') && nextPageBtn.parent().addClass('disabled')
+                    }
+
+                    const itemsCount = data.results.length;
+                    tableBodyContainer.empty();
+                    const currentDate = moment();
+
+                    for (let i = 0; i < itemsCount; i++) {
+                        tableBodyContainer.append($(
+                            `<tr>
+                                <td>${data.results[i].id}</td>
+                                <td>${data.results[i].client.username}</td>
+                                <td>${data.results[i].full_price} PLN</td>
+                                <td>${data.results[i].order_address}</td>
+                                <td>${moment(data.results[i].order_date).format('DD-MM-YYYY')}</td>
+                                <td style="color:${currentDate.diff(moment(data.results[i].payment_deadline)) < 0 ? 'forestgreen' : 'indianred'}">${moment(data.results[i].payment_deadline).format('DD-MM-YYYY')}</td>
+                                <td>${data.results[i].is_paid ? "<i class=\"fa fa-check\" style=\"color:forestgreen;\"></i>" : "<i class=\"fa fa-remove\" style=\"color:indianred;\"></i>"}</td>
+                            </tr>`
+                        ));
+                    }
+                },
+                error: (jqXHR, textStatus, errorThrown) => {
+                    console.log(jqXHR, textStatus, errorThrown);
+                },
+            });
+
+            return false
+        }
+
+        reloadOrdersList(null);
+    </script>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends 'basic.html' %}
+{% load static custom_project_templatetags %}
+{% load static %}
+{% block styles_content %}
+    <style>
+        .select2{
+            width: 100% !important;
+        }
+        .asterixField{
+            color: var(--primary-bg-border);
+        }
+        .was-validated .form-control:invalid~.invalid-feedback, .was-validated .form-control:invalid~.invalid-tooltip {
+            display: block;
+        }
+    </style>
+{% endblock %}
+{% block page_header_title %}
+    Add new product
+{% endblock %}
+{% block page_breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Products</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Add new</a></li>
+    {% csrf_token %}
+{% endblock %}
+{% block page_header_buttons %}
+{% endblock %}
+{% block page_content %}
+    <div class="row">
+        <div class="col-lg-12 col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Product data</h3>
+                </div>
+                <div class="card-body pt-2">
+                    <form class="needs-validation" novalidate>
+                        <div class="form-row">
+                            <div class="col-md-12 mb-3">
+                                <label for="productName" class="form-label">Name <span class="asterixField">*</span></label>
+                                <input type="text" name="name" class="form-control" id="productName" placeholder="Product name" required>
+                                <div class="invalid-feedback">Name of the product cannot be empty!</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-md-12 mb-3">
+                                <label for="productDescription" class="form-label">Description</label>
+                                <textarea type="text" name="description" class="form-control" id="productDescription" placeholder="Product description"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productPrice" class="form-label">Price <span class="asterixField">*</span></label>
+                                <input type="number" min="0" step="0.01" max="100000" name="price" class="form-control" id="productPrice" placeholder="Product price" required>
+                                <div class="invalid-feedback">Price of the product cannot be empty!</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Category <span class="asterixField">*</span></label>
+                                <select name="category" class="form-control form-select" data-bs-placeholder="Category" required>
+                                    <option value="" selected>---------</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.pk }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">Category of the product cannot be empty!</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-md-12 mb-6">
+                                <label class="form-label mt-0">Preview image <span class="asterixField">*</span></label>
+                                <input class="form-control" type="file" name="photo" accept="image/png, image/jpeg, image/jpg" required>
+                                <div class="invalid-feedback">Preview of the product cannot be empty!</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Add new product</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_scripts %}
+    <script>
+        $('select.form-select').select2({});
+
+        $( "form.needs-validation" ).on( "submit", function( event ) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            this.classList.add('was-validated');
+
+            if (this.checkValidity()) {
+                $.ajax({
+                    url: "{% url 'api_product_create' %}",
+                    data: new FormData(this),
+                    type: 'POST',
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : false,
+                    processData : false,
+                    success: (data, textStatus, jqXHR) => {
+                        window.location.href = "{% url 'products_list' %}"
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        console.log(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            }
+        });
+    </script>
+{% endblock %}

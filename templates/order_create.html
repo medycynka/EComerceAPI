@@ -1,0 +1,285 @@
+{% extends 'basic.html' %}
+{% load static custom_project_templatetags %}
+{% load static %}
+{% block styles_content %}
+    <style>
+        .select2{
+            width: 100% !important;
+        }
+        .table-bordered>:not(caption)>* {
+            border-width: 1px 0;
+        }
+    </style>
+{% endblock %}
+{% block page_header_title %}
+    Cart
+{% endblock %}
+{% block page_breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Products</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'orders_list' %}">Orders</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'order_create' %}">Cart</a></li>
+    {% csrf_token %}
+{% endblock %}
+{% block page_header_buttons %}
+{% endblock %}
+{% block page_content %}
+    <div class="row">
+        <div class="col-xl-8 col-md-12">
+            <div class="card cart">
+                <div class="card-header">
+                    <h3 class="card-title">Cart</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-vcenter text-center mb-0">
+                            <thead>
+                                <tr class="border-top">
+                                    <th class="w-5" style="width:30%;">Product</th>
+                                    <th style="width:10%;">Price (PLN)</th>
+                                    <th style="width:25%;">Quantity</th>
+                                    <th style="width:15%;">Total price (PLN)</th>
+                                    <th style="width:20%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Shipping details</h3>
+                </div>
+                <div class="card-body">
+                    <form novalidate id="clientDataForm">
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-0">
+                                <div id="div_id_name" class="mb-3">
+                                    <label for="id_name" class="form-label requiredField">
+                                        Name<span class="asteriskField">*</span>
+                                    </label>
+                                    <input type="text" name="name" placeholder="Imię" maxlength="255" class="textinput textInput form-control" required="" id="id_name">
+                                </div>
+                            </div>
+                            <div class="form-group col-md-6 mb-0">
+                                <div id="div_id_surname" class="mb-3">
+                                    <label for="id_surname" class="form-label requiredField">
+                                        Surname<span class="asteriskField">*</span>
+                                    </label>
+                                    <input type="text" name="surname" placeholder="Nazwisko" maxlength="255" class="textinput textInput form-control" required="" id="id_surname">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                <div id="div_id_name" class="mb-3">
+                                    <label for="id_address" class="form-label requiredField">
+                                        Shipping address<span class="asteriskField">*</span>
+                                    </label>
+                                    <input type="text" name="address" placeholder="Adres dostawy" maxlength="255" class="textinput textInput form-control" required="" id="id_address">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Order details</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table border-top-0">
+                        <tbody>
+                            <tr>
+                                <td class="border-top-0">Total price</td>
+                                <td class="text-end fw-bold border-top-0 full-price">1136 PLN</td>
+                            </tr>
+                            <tr>
+                                <td class="border-top-0">Discount</td>
+                                <td class="text-end fw-bold border-top-0">0%</td>
+                            </tr>
+                            <tr>
+                                <td class="border-top-0">Shipping</td>
+                                <td class="text-end fw-bold border-top-0">Free</td>
+                            </tr>
+                            <tr>
+                                <td class="fs-20 fw-bold border-top-0">Final price</td>
+                                <td class="text-end fs-20 fw-bold border-top-0 full-end-price">1136 PLN</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-list text-end">
+                        <a href="{% url 'products_list' %}" class="btn btn-primary"><i class="fa fa-arrow-left me-1"></i>Continue Shopping</a>
+                        <a href="javascript:void(0)" class="btn btn-success" onclick="createOrder()">Order<i class="fa fa-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_scripts %}
+    <script>
+        const fullPrice = document.querySelector('td.text-end.full-price');
+        const fullEndPrice = document.querySelector('td.text-end.full-end-price');
+        const listContainer = $('.table-responsive>.table>tbody');
+        let shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
+        const updateFullPrice = () => {
+            const prices = document.querySelectorAll('td#singletonPrice');
+            const quantities = document.querySelectorAll('input.qty');
+            let fullProductsPrice = 0;
+
+            for (let i = 0; i < prices.length; i++) {
+                fullProductsPrice += Number(prices[i].innerHTML) * parseInt(quantities[i].value);
+            }
+
+            fullPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
+            fullEndPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
+        };
+        const removeProductRow = (el) => {
+            const productId = $(el).closest('tr').data('product-id').toString();
+            shoppingCart = shoppingCart.filter((product) => product.id !== productId);
+            sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
+            el.parentNode.parentNode.parentNode.removeChild(el.parentNode.parentNode);
+
+            updateFullPrice();
+        };
+        const orderDataSerializer = () => {
+            const data = {
+                "client": "{{ request.user.id }}",
+                "order_address": document.querySelector('input#id_address').value,
+                "orderproductlistitem_set": [],
+            };
+
+            const rows = listContainer[0].querySelectorAll('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                if (parseInt(rows[i].children[2].querySelector('input').value) > 0) {
+                    data["orderproductlistitem_set"].push({
+                        "product": rows[i].dataset['productId'],
+                        "quantity": parseInt(rows[i].children[2].querySelector('input').value)
+                    })
+                }
+            }
+            
+            return data
+        };
+        const createOrder = () => {
+            const orderData = orderDataSerializer();
+            const clientDataForm = document.querySelector('form#clientDataForm');
+
+            clientDataForm.classList.add('was-validated');
+
+            if (clientDataForm.checkValidity() === false){
+                Swal.fire({
+                    title: 'Empty data!',
+                    html: `To finalise your order you need to provide your name, surname and shipping address.`,
+                    icon: 'error',
+                    allowEscapeKey: false,
+                    allowOutsideClick: false
+                });
+
+                return false;
+            }
+
+            if (orderData["orderproductlistitem_set"].length > 0){
+                $.ajax({
+                    url: "{% url 'api_order_create' %}",
+                    data: JSON.stringify(orderData),
+                    type: 'POST',
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : 'application/json',
+                    success: (data, textStatus, jqXHR) => {
+                        Swal.fire({
+                            title: 'Przyjęto zamówienie!',
+                            html: `Twoje zamówienie o łącznym koszcie <b>${data.total_product_price}</b> PLN i terminie płatności do <b>${data.payment_date}</b> zostało przyjęte do realizacji.`,
+                            icon: 'success',
+                            allowEscapeKey: false,
+                            allowOutsideClick: false
+                        }).then((result) => {
+                            console.log(result);
+                            sessionStorage.removeItem('shopping-cart');
+                            if (result.isConfirmed) {
+                                window.location.href = '{% url 'products_list' %}';
+                            }
+                        });
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        console.log(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            } else {
+                Swal.fire({
+                    title: 'Your cart is empty!',
+                    html: `Your cart is empty!`,
+                    icon: 'error',
+                    allowEscapeKey: false,
+                    allowOutsideClick: false
+                })
+            }
+        };
+
+        for (let i = 0; i < shoppingCart.length; i++) {
+            listContainer.append($(
+               `
+                <tr data-product-id="${shoppingCart[i].id}">
+                    <td>${shoppingCart[i].name}</td>
+                    <td class="fw-bold" id="singletonPrice">${shoppingCart[i].price}</td>
+                    <td>
+                        <div class="handle-counter" id="handleCounter4">
+                            <button type="button" class="counter-minus btn btn-default lh-2 shadow-none">
+                                <i class="fe fe-minus"></i>
+                            </button>
+                            <input type="text" value="1" class="qty">
+                            <button type="button" class="counter-plus btn btn-default lh-2 shadow-none">
+                                <i class="fe fe-plus "></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="fw-bold" id="fullPrice">${shoppingCart[i].price}</td>
+                    <td>
+                        <a href="javascript:void(0)" class="btn btn-square btn-danger-light me-1" aria-label="Save for Wishlist"><i class="icon icon-heart fs-13"></i></a>
+                        <a href="javascript:void(0)" onclick="removeProductRow(this)" class="btn btn-square btn-info-light me-1" aria-label="Remove"><i class="icon icon-trash fs-13"></i></a>
+                    </td>
+                </tr>
+                `
+            ));
+        }
+        
+        $('.counter-plus').on('click',function(){
+            const quantityHolder = $(this).closest('div').find('.qty');
+            const currentVal = parseInt(quantityHolder.val());
+            if (!isNaN(currentVal)) {
+                quantityHolder.val(currentVal + 1);
+
+                const rowParentEl = $(this).closest('tr');
+                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal + 1)).toFixed(2);
+
+                updateFullPrice();
+            }
+        });
+        $('.counter-minus').on('click',function(){
+            const quantityHolder = $(this).closest('div').find('.qty');
+            const currentVal = parseInt(quantityHolder.val());
+            if (!isNaN(currentVal) && currentVal > 0) {
+                quantityHolder.val(currentVal - 1);
+
+                const rowParentEl = $(this).closest('tr');
+                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal - 1)).toFixed(2);
+
+                updateFullPrice();
+            }
+        });
+        $('input.qty').on('input', function () {
+            const rowParentEl = $(this).closest('tr');
+            rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * parseInt(this.value)).toFixed(2);
+
+            updateFullPrice();
+        });
+
+        updateFullPrice();
+    </script>
+{% endblock %}

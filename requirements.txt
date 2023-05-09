@@ -1,0 +1,12 @@
+django>=4.2
+pillow>=9.5.0
+django-cors-headers>=3.11.0
+psycopg2-binary>=2.9.1
+requests>=2.30.0
+pathlib>=1.0.1
+pyproj>=3.3.1
+django-filter>=22.1
+djangorestframework>=3.14.0
+graphene>=3.2.2
+factory-boy>=3.2.1
+Faker>=13.12.0

@@ -1,0 +1,419 @@
+{% extends 'basic.html' %}
+{% load static custom_project_templatetags %}
+{% load static %}
+{% block styles_content %}
+    <style>
+        .select2{
+            width: 100% !important;
+        }
+    </style>
+{% endblock %}
+{% block page_header_title %}
+    Sells statistics
+{% endblock %}
+{% block page_breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'products_list' %}">Products</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'products_sells_statistics' %}">Sells statistics</a></li>
+    {% csrf_token %}
+{% endblock %}
+{% block page_header_buttons %}
+{% endblock %}
+{% block page_content %}
+    <div class="row">
+        <div class="col-lg-12 col-md-12 col-sm-12 col-xl-12">
+            <div class="row">
+                <div class="col-lg-6 col-md-6 col-sm-12 col-xl-3">
+                    <div class="card overflow-hidden">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h6 class="">Total Sales</h6>
+                                    <h3 class="mb-2 number-font" id="totalSales">0</h3>
+                                    <p class="text-muted mb-0">
+                                        <span class="text-primary" id="totalSalesThisMonth"><i class="fa fa-chevron-circle-up text-primary me-1"></i> 0</span> this month
+                                    </p>
+                                </div>
+                                <div class="col col-auto">
+                                    <div class="counter-icon bg-primary-gradient box-shadow-primary brround ms-auto">
+                                        <i class="fe fe-trending-up text-white mb-5 "></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-6 col-sm-12 col-xl-3">
+                    <div class="card overflow-hidden">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h6 class="">Top seller</h6>
+                                    <h3 class="mb-2 number-font" id="topSellingProduct">-</h3>
+                                    <p class="text-muted mb-0">
+                                        profit <span class="text-secondary" id="topSellingProductProfit">0 PLN <i class="fa fa-chevron-circle-up text-secondary me-1"></i></span>
+                                    </p>
+                                </div>
+                                <div class="col col-auto">
+                                    <div class="counter-icon bg-danger-gradient box-shadow-danger brround  ms-auto">
+                                        <i class="icon icon-rocket text-white mb-5 "></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-6 col-sm-12 col-xl-3">
+                    <div class="card overflow-hidden">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h6 class="">Total Profit</h6>
+                                    <h3 class="mb-2 number-font" id="totalProfit">0 PLN</h3>
+                                    <p class="text-muted mb-0">
+                                        this month <span class="text-success" id="totalProfitThisMonth">0 PLN <i class="fa fa-chevron-circle-down text-success me-1"></i></span>
+                                    </p>
+                                </div>
+                                <div class="col col-auto">
+                                    <div class="counter-icon bg-secondary-gradient box-shadow-secondary brround ms-auto">
+                                        <i class="fe fe-dollar-sign text-white mb-5 "></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-6 col-sm-12 col-xl-3">
+                    <div class="card overflow-hidden">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h6 class="">Total Cost</h6>
+                                    <h3 class="mb-2 number-font">{% random_int 10000 99999 True %} PLN</h3>
+                                    <p class="text-muted mb-0">
+                                        <span class="text-danger"><i class="fa fa-chevron-circle-down text-danger me-1"></i> 0.2%</span> last month
+                                    </p>
+                                </div>
+                                <div class="col col-auto">
+                                    <div class="counter-icon bg-success-gradient box-shadow-success brround  ms-auto">
+                                        <i class="fe fe-briefcase text-white mb-5 "></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Top sellers</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <canvas id="topSellers" class="chart-donut"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-3">
+            <div class="card custom-card ">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Orders</h3>
+                </div>
+                <div class="card-body pt-0 ps-0 pe-0">
+                    <canvas id="recentOrders" class="chart-donut"></canvas>
+                    <div class="row sales-product-infomation pb-0 mb-0 mx-auto wd-100p mt-6">
+                        <div class="col-md-6 col justify-content-center text-center">
+                            <p class="mb-0 d-flex justify-content-center"><span class="legend bg-primary"></span>Paid</p>
+                            <h3 class="mb-1 fw-bold" id="paidOrders">5238</h3>
+                            <div class="d-flex justify-content-center ">
+                                <p class="text-muted mb-0">Last 6 months</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col text-center float-end">
+                            <p class="mb-0 d-flex justify-content-center "><span class="legend bg-background2"></span>Unpaid</p>
+                            <h3 class="mb-1 fw-bold" id="unpaidOrders">3467</h3>
+                            <div class="d-flex justify-content-center ">
+                                <p class="text-muted mb-0">Last 6 months</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Least sellers</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <canvas id="leastSellers" class="chart-donut"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_scripts %}
+    <!-- INTERNAL ion.rangeSlider.min js -->
+    <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
+
+    <!-- INTERNAL moment.min js -->
+    <script src="{% static 'assets/plugins/datatable/moment/moment.min.js' %}"></script>
+
+    <!-- INTERNAL CHART JS -->
+    <script src="{% static 'assets/plugins/chart/chart.umd.min.js' %}"></script>
+    <script src="{% static 'assets/js/apexcharts.js' %}"></script>
+
+    <script>
+        (function() {
+            const topSellersChart = new Chart(document.getElementById('topSellers'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (v, k) => '-'),
+                    datasets: [
+                        {
+                            label: "Sells count",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        },
+                        {
+                            label: "Profits",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Best sellers'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex > 0) {
+                                            label += Number(context.parsed.y).toFixed(3) + ' tys. PLN';
+                                        } else {
+                                            label += context.parsed.y.toString();
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                },
+            });
+            const recentOrdersChart = new Chart(document.getElementById('recentOrders'), {
+                type: 'pie',
+                data: {
+                    labels: ['Paid', 'Unpaid'],
+                    datasets: [
+                        {
+                            label: "Orders count",
+                            data: [1, 1],
+                            backgroundColor: ['rgb(153, 102, 255)', 'rgb(255, 93, 158)'],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Paid orders'
+                        }
+                    },
+                },
+            });
+            const leastSellersChart = new Chart(document.getElementById('leastSellers'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (v, k) => '-'),
+                    datasets: [
+                        {
+                            label: "Sells count",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(255, 159, 64)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                        },
+                        {
+                            label: "Profits",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Worst sellers'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex > 0) {
+                                            label += Number(context.parsed.y).toFixed(3) + ' tys. PLN';
+                                        } else {
+                                            label += context.parsed.y.toString();
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                },
+            });
+            const getAPIData = (
+                apiUrl,
+                method,
+                data=null,
+                onSuccess=(data, textStatus, jqXHR)=>{console.log(data, textStatus, jqXHR)},
+                onError=(jqXHR, textStatus, errorThrown)=>{console.log(jqXHR, textStatus, errorThrown)}
+            ) => {
+                $.ajax({
+                    url: apiUrl,
+                    data: data,
+                    type: method,
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : 'application/json',
+                    processData : true,
+                    success: (data, textStatus, jqXHR) => {
+                        onSuccess(data, textStatus, jqXHR);
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        onError(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            };
+            const topSellersQuery = `
+                {
+                  topSellers {
+                    name
+                    sellsCount
+                    price
+                  }
+                }
+            `;
+            const leastSellersQuery = `
+                {
+                  leastSellers {
+                    name
+                    sellsCount
+                    price
+                  }
+                }
+            `;
+            const ordersQuery = `
+                {
+                  allOrders {
+                    isPaid
+                  }
+                }
+            `;
+
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topSellersQuery}), (data) => {
+                if (data.data.topSellers.length > 0) {
+                    const topTen = data.data.topSellers.slice(0, 9);
+                    topSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
+                    topSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
+                    topSellersChart.data.labels = topTen.map(product => product.name);
+                    topSellersChart.update();
+
+                    const initialSum = 0;
+                    const sellsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum);
+                    const profitsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum);
+
+                    document.getElementById('totalSales').innerHTML = sellsSumWithInitial.toString();
+
+                    document.getElementById('topSellingProduct').innerHTML = topTen[0].name;
+                    document.getElementById('topSellingProductProfit').innerHTML = `${(topTen[0].sellsCount * Number(topTen[0].price)).toFixed(2)} PLN`;
+
+                    document.getElementById('totalProfit').innerHTML = `${profitsSumWithInitial.toFixed(2)} PLN`;
+
+                    const currentMonthSalesQuery = `
+                        {
+                          topSellers(dateFrom: "${moment().startOf('month').format('YYYY-MM-DD hh:mm:ss')}", dateTo: "${moment().endOf('month').format('YYYY-MM-DD hh:mm:ss')}") {
+                            name
+                            price
+                            sellsCount
+                          }
+                        }
+                    `;
+
+                    getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: currentMonthSalesQuery}), (data) => {
+                        const initialSum = 0;
+
+                        document.getElementById('totalSalesThisMonth').innerHTML = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum).toString();
+
+                        document.getElementById('totalProfitThisMonth').innerHTML = `${data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum).toFixed(2)} PLN`;
+                    });
+                }
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastSellersQuery}), (data) => {
+                if (data.data.leastSellers.length > 0) {
+                    const topTen = data.data.leastSellers.slice(0, 9);
+                    leastSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
+                    leastSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
+                    leastSellersChart.data.labels = topTen.map(product => product.name);
+                    leastSellersChart.update();
+                }
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
+                const paid = data.data.allOrders.filter(order => order.is_paid).length;
+                const unpaid = data.data.allOrders.length - paid;
+
+                recentOrdersChart.data.datasets[0].data = [
+                    paid,
+                    unpaid
+                ];
+                recentOrdersChart.update();
+
+                document.getElementById('paidOrders').innerHTML = paid.toString();
+                document.getElementById('unpaidOrders').innerHTML = unpaid.toString();
+            });
+        })();
+    </script>
+{% endblock %}

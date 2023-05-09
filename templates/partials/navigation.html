@@ -1,0 +1,69 @@
+{% load static custom_project_templatetags %}
+                <!--APP-SIDEBAR-->
+                <div class="sticky">
+                    <div class="app-sidebar__overlay" data-bs-toggle="sidebar"></div>
+                    <aside class="app-sidebar">
+                        <div class="side-header" style="background-color: #f2f3f9;">
+                            <a class="header-brand1" href="{% url 'home' %}">
+                                <img src="{% static 'assets/images/brand/logo.png' %}" class="header-brand-img desktop-logo" alt="logo">
+                                <img src="{% static 'assets/images/brand/logo-1.png' %}" class="header-brand-img toggle-logo" alt="logo">
+                                <img src="{% static 'assets/images/brand/logo-2.png' %}" class="header-brand-img light-logo" alt="logo">
+                                <img src="{% static 'assets/images/brand/logo-3.png' %}" class="header-brand-img light-logo1" alt="logo">
+                            </a>
+                            <!-- LOGO -->
+                        </div>
+                        <div class="main-sidemenu">
+                            <div class="slide-left disabled" id="slide-left"><svg xmlns="http://www.w3.org/2000/svg"
+                                    fill="#7b8191" width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z" />
+                                </svg></div>
+                            <ul class="side-menu">
+                                <li class="sub-category">
+                                    <h3></h3>
+                                </li>
+                                <li>
+                                    <a class="side-menu__item" href="{% url 'products_list' %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-bag-plus" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M8 7.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V12a.5.5 0 0 1-1 0v-1.5H6a.5.5 0 0 1 0-1h1.5V8a.5.5 0 0 1 .5-.5z"/>
+                                            <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/>
+                                        </svg>
+                                        <span class="side-menu__label">&emsp;Products</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="side-menu__item" href="{% url 'orders_list' %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-card-list" viewBox="0 0 16 16">
+                                            <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+                                            <path d="M5 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 5 8zm0-2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-1-5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zM4 8a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm0 2.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
+                                        </svg>
+                                        <span class="side-menu__label">&emsp;Orders</span>
+                                    </a>
+                                </li>
+                                {% if request.user.is_superuser or request.user|is_seller %}
+                                    <li>
+                                        <a class="side-menu__item" href="{% url 'products_top_sellers_list' %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-sort-up" viewBox="0 0 16 16">
+                                                <path d="M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-1.999.007-.007a.498.498 0 0 1 .7.006l2 2a.5.5 0 1 1-.707.708L3.5 3.707V12.5zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/>
+                                            </svg>
+                                            <span class="side-menu__label">&emsp;Top sellers</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="side-menu__item" href="{% url 'products_sells_statistics' %}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-sort-up" viewBox="0 0 16 16">
+                                                <path d="M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-1.999.007-.007a.498.498 0 0 1 .7.006l2 2a.5.5 0 1 1-.707.708L3.5 3.707V12.5zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z"/>
+                                            </svg>
+                                            <span class="side-menu__label">&emsp;Sells statistics</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                            <div class="slide-right" id="slide-right"><svg xmlns="http://www.w3.org/2000/svg" fill="#7b8191"
+                                    width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+                <!--/APP-SIDEBAR-->

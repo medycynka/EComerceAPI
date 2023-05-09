@@ -1,0 +1,82 @@
+{% load static %}
+<!doctype html>
+<html lang="en" dir="ltr">
+    <head>
+        {% include 'partials/meta_content.html' %}
+
+        {% block meta_content %}{% endblock %}
+
+        <!-- FAVICON -->
+        <link rel="shortcut icon" type="image/x-icon" href="{% static 'assets/images/brand/favicon.ico' %}" />
+
+        <!-- TITLE -->
+        <title>E-comerce API {% block title %}{% endblock %}</title>
+
+        {% include 'partials/basic_styles.html' %}
+
+        {% block styles_content %}{% endblock %}
+    </head>
+
+    {% block document_body %}
+        <body class="app sidebar-mini ltr light-mode" {% block onload %}{% endblock %}>
+        {% include 'partials/global_loader.html' %}
+
+        <!-- PAGE -->
+        <div class="page">
+            <div class="page-main">
+                {% include 'partials/app_header.html' %}
+
+                {% include 'partials/navigation.html' %}
+
+                <!--app-content open-->
+                <div class="main-content app-content mt-0">
+                    <div class="side-app">
+                        <!-- CONTAINER -->
+                        <div id="pageContentMainContainer" class="main-container container-fluid">
+                            <!-- PAGE-HEADER -->
+                            <div class="page-header">
+                                <div>
+                                    <h1 class="page-title">
+                                        {% block page_header_title %}
+                                        {% endblock %}
+                                    </h1>
+                                    {% block breadcrumbs_wrapper %}
+                                        {% if use_breadcrumbs|yesno:'t,n,t' == 't' %}
+                                            <ol class="breadcrumb">
+                                                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                                                {% block page_breadcrumbs %}{% endblock %}
+                                            </ol>
+                                        {% endif %}
+                                    {% endblock %}
+                                </div>
+                                {% block page_header_buttons %}
+                                {% endblock %}
+                            </div>
+                            <!-- PAGE-HEADER END -->
+
+                            <!-- PAGE CONTENT -->
+                            {% block page_content %}
+
+                            {% endblock %}
+                        </div>
+                        <!-- CONTAINER END -->
+                    </div>
+                </div>
+                <!--app-content end-->
+            </div>
+
+            {% include 'partials/footer.html' %}
+        </div>
+
+        <!-- BACK-TO-TOP -->
+        {% block back_to_top_additional_buttons %}{% endblock %}
+        <a href="#top" id="back-to-top"><i class="fa fa-angle-up"></i></a>
+
+        {% include 'partials/basic_scripts.html' %}
+    
+        {% block custom_scripts %}
+        
+        {% endblock %}
+    </body>
+    {% endblock %}
+</html>

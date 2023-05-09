@@ -1,0 +1,8 @@
+{% load static %}
+        <!-- GLOBAL-LOADER -->
+        <div id="global-loader">
+            {% block custom_loader %}
+                <img src="{% static 'assets/images/loader.svg' %}" class="loader-img" alt="Loader">
+            {% endblock %}
+        </div>
+        <!-- /GLOBAL-LOADER -->
