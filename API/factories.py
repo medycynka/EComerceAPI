@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.utils import timezone
-from django.utils.text import slugify
 
 # 3rd-party
 import factory
@@ -16,6 +15,7 @@ from faker import Faker
 
 from API.models import ProductCategory
 from API.models import Product
+from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
 
@@ -45,6 +45,14 @@ def random_number(length=10):
     for i in range(0, length):
         number += f'{fake.random_digit()}'
     return number
+
+
+def random_postal_code():
+    post_code = fake.postcode()
+
+    if '-' not in post_code:
+        return f'{post_code[:2]}-{post_code[2:]}'
+    return post_code
 
 
 class UserFactory(DjangoModelFactory):
@@ -91,8 +99,23 @@ class ProductFactory(DjangoModelFactory):
     description = factory.Faker('paragraph', locale='en')
     price = factory.LazyFunction(lambda: random.uniform(0.1, 1000.0))
     photo = factory.django.ImageField(width=512, height=512)
-    seller = factory.Iterator(get_user_model().objects.all())
+    seller = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_SELLER_GROUP_NAME))
     category = factory.Iterator(ProductCategory.objects.all())
+
+
+class AddressFactory(DjangoModelFactory):
+    """:model:`API.Address` factory."""
+
+    class Meta:
+        model = Address
+
+    country = factory.LazyFunction(lambda: random.choice(Address.Countries.choices)[0])
+    city = factory.LazyFunction(lambda: fake.city())
+    street = factory.LazyFunction(lambda: fake.street_name())
+    street_number = factory.LazyFunction(lambda: fake.building_number())
+    street_number_local = factory.LazyFunction(lambda: fake.building_number())
+    post_code = factory.LazyFunction(lambda: random_postal_code())
+    state = factory.LazyFunction(lambda: random.choice(Address.PolishStates.choices)[0])
 
 
 class OrderFactory(DjangoModelFactory):
@@ -102,11 +125,11 @@ class OrderFactory(DjangoModelFactory):
         model = Order
 
     client = factory.Iterator(Group.objects.get(name=settings.USER_CLIENT_GROUP_NAME).user_set.all())
-    order_address = factory.LazyFunction(lambda: fake.address())
+    order_address = factory.Iterator(Address.objects.all())
 
     @factory.post_generation
     def random_product_list(self, create, extracted, **kwargs):
-        count = min(max(1, kwargs.get('count', 3)), 16)
+        count = random.randint(min(max(1, kwargs.get('count', 3)), 8), 16)
         products = [ids for ids in Product.objects.all().values_list('id', flat=True)]
         products = random.sample(products, count)
         OrderProductListItem.objects.bulk_create([

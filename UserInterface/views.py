@@ -19,7 +19,7 @@ class RestrictAccessTemplateView(TemplateView):
 
         if user.is_authenticated:
             if user.is_superuser or user.groups.filter(name=self.allowed_users_groups).exists():
-                return super(RestrictAccessTemplateView, self).get(request, *args, **kwargs)
+                return super().get(request, *args, **kwargs)
             return redirect(self.not_allowed_redirect)
 
         return redirect('login')
@@ -59,7 +59,7 @@ class ProductListTemplateView(TemplateView):
     template_name = 'products.html'
 
     def get_context_data(self, **kwargs):
-        context = super(ProductListTemplateView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         filter_class = ProductFilter()
         context['order_options'] = filter_class.filters['order'].field.choices
@@ -74,7 +74,7 @@ class ProductCreateTemplateView(RestrictAccessTemplateView):
     not_allowed_redirect = 'products_list'
 
     def get_context_data(self, **kwargs):
-        context = super(ProductCreateTemplateView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context['categories'] = ProductCategory.objects.all()
 
@@ -85,7 +85,7 @@ class ProductDetailsTemplateView(TemplateView):
     template_name = 'product_details.html'
 
     def get_context_data(self, **kwargs):
-        context = super(ProductDetailsTemplateView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context['product_pk'] = kwargs.get('pk', None)
 
