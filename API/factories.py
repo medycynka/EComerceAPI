@@ -126,6 +126,7 @@ class OrderFactory(DjangoModelFactory):
 
     client = factory.Iterator(Group.objects.get(name=settings.USER_CLIENT_GROUP_NAME).user_set.all())
     order_address = factory.Iterator(Address.objects.all())
+    is_paid = factory.LazyFunction(lambda: random.uniform(0, 1) > 0.3)
 
     @factory.post_generation
     def random_product_list(self, create, extracted, **kwargs):

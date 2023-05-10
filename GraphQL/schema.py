@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 import graphene
 from graphene_django import DjangoObjectType
@@ -28,6 +28,7 @@ class ProductStatisticType(DjangoObjectType):
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
 
     sells_count = graphene.Int()
+    total_profit = graphene.Decimal()
 
 
 class AddressType(DjangoObjectType):
@@ -53,10 +54,14 @@ class OrderType(DjangoObjectType):
     products_list = graphene.List(OrderProductListItemType)
 
 
+class SalesAndProfitsType(graphene.ObjectType):
+    total_sales = graphene.BigInt()
+    total_profits = graphene.Decimal()
+
+
 def get_date_range_product_filter_from_kwargs(**kwargs):
     date_from_limit = kwargs.get("date_from", None)
     date_to_limit = kwargs.get("date_to", None)
-
     date_filter_query = Q()
 
     if date_from_limit:
@@ -72,10 +77,31 @@ class APIQuery(graphene.ObjectType):
     category = graphene.Field(ProductCategoryType, id=graphene.ID(required=True))
     all_products = graphene.List(ProductType)
     product = graphene.Field(ProductType, id=graphene.ID(required=True))
-    top_sellers = graphene.List(ProductStatisticType, date_from=graphene.String(required=False), date_to=graphene.String(required=False))
-    least_sellers = graphene.List(ProductStatisticType, date_from=graphene.String(required=False), date_to=graphene.String(required=False))
-    all_orders = graphene.List(OrderType)
+    top_sellers = graphene.List(ProductStatisticType,
+                                date_from=graphene.String(required=False),
+                                date_to=graphene.String(required=False)
+                                )
+    least_sellers = graphene.List(ProductStatisticType,
+                                  date_from=graphene.String(required=False),
+                                  date_to=graphene.String(required=False)
+                                  )
+    most_profitable = graphene.List(ProductStatisticType,
+                                    date_from=graphene.String(required=False),
+                                    date_to=graphene.String(required=False)
+                                    )
+    least_profitable = graphene.List(ProductStatisticType,
+                                     date_from=graphene.String(required=False),
+                                     date_to=graphene.String(required=False)
+                                     )
+    all_orders = graphene.List(OrderType,
+                               date_from=graphene.String(required=False),
+                               date_to=graphene.String(required=False)
+                               )
     order = graphene.Field(OrderType, id=graphene.ID(required=True))
+    total_profits_and_sales = graphene.Field(SalesAndProfitsType,
+                                             date_from=graphene.String(required=False),
+                                             date_to=graphene.String(required=False)
+                                             )
 
     def resolve_all_categories(self, info):
         return ProductCategory.objects.all()
@@ -101,7 +127,24 @@ class APIQuery(graphene.ObjectType):
     def resolve_least_sellers(self, info, **kwargs):
         return Product.objects.least_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
 
-    def resolve_all_orders(self, info):
+    def resolve_most_profitable(self, info, **kwargs):
+        return Product.objects.most_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+
+    def resolve_least_profitable(self, info, **kwargs):
+        return Product.objects.least_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+
+    def resolve_all_orders(self, info, **kwargs):
+        date_from_limit = kwargs.get("date_from", None)
+        date_to_limit = kwargs.get("date_to", None)
+        date_filter_query = Q()
+
+        if date_from_limit:
+            date_filter_query.add(Q(order_date__gte=date_from_limit), Q.AND)
+        if date_to_limit:
+            date_filter_query.add(Q(order_date__lte=date_to_limit), Q.AND)
+        if date_filter_query:
+            return Order.objects.filter(date_filter_query)
+
         return Order.objects.all()
 
     def resolve_order(self, info, id):
@@ -109,6 +152,11 @@ class APIQuery(graphene.ObjectType):
             return Order.objects.get(pk=id)
         except Order.DoesNotExist:
             return None
+
+    def resolve_total_profits_and_sales(self, info, **kwargs):
+        return Product.objects.most_profitable(
+            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
+        ).aggregate(total_sales=Sum('sells_count'), total_profits=Sum('total_profit'))
 
 
 schema = graphene.Schema(query=APIQuery)

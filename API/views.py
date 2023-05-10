@@ -18,7 +18,8 @@ from API.models import Order
 from API.models import Address
 from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
-from API.serializers import ProductTopSellersSerializer
+from API.serializers import ProductTopLeastSellersSerializer
+from API.serializers import ProductTopLeastProfitableSerializer
 from API.serializers import AddressSerializer
 from API.serializers import OrderSerializer
 from API.serializers import OrderCreateSerializer
@@ -26,6 +27,8 @@ from API.serializers import UserCreateSerializer
 from API.filters import ProductFilter
 from API.filters import ProductTopSellersFilter
 from API.filters import ProductLeastSellersFilter
+from API.filters import ProductTopProfitableFilter
+from API.filters import ProductLeastProfitableFilter
 
 
 class ProductModelViewSet(ModelViewSet):
@@ -53,26 +56,40 @@ class ProductListCreateAPIView(ListCreateAPIView):
     permission_classes = [AuthenticatedSellersOnly]
 
 
-class ProductTopSellersListAPIView(ListAPIView):
-    serializer_class = ProductTopSellersSerializer
+class ProductTopLeastBaseListAPIView(ListAPIView):
+    serializer_class = ProductTopLeastSellersSerializer
     queryset = Product.objects.none()
     filterset_class = ProductTopSellersFilter
     permission_classes = [AuthenticatedSellersOnly]
     pagination_class = LimitOffsetPagination
 
+
+class ProductTopSellersListAPIView(ProductTopLeastBaseListAPIView):
     def get_queryset(self):
         return Product.objects.top_sellers(self.request.user)
 
 
-class ProductLeastSellersListAPIView(ListAPIView):
-    serializer_class = ProductTopSellersSerializer
-    queryset = Product.objects.none()
+class ProductLeastSellersListAPIView(ProductTopLeastBaseListAPIView):
     filterset_class = ProductLeastSellersFilter
-    permission_classes = [AuthenticatedSellersOnly]
-    pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
         return Product.objects.least_sellers(self.request.user)
+
+
+class ProductTopProfitableListAPIView(ProductTopLeastBaseListAPIView):
+    serializer_class = ProductTopLeastProfitableSerializer
+    filterset_class = ProductTopProfitableFilter
+
+    def get_queryset(self):
+        return Product.objects.most_profitable(self.request.user)
+
+
+class ProductLeastProfitableListAPIView(ProductTopLeastBaseListAPIView):
+    serializer_class = ProductTopLeastProfitableSerializer
+    filterset_class = ProductLeastProfitableFilter
+
+    def get_queryset(self):
+        return Product.objects.most_profitable(self.request.user)
 
 
 class AddressModelViewSet(ModelViewSet):

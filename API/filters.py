@@ -73,3 +73,13 @@ class ProductTopSellersFilter(ProductTopLeastSellersFilter):
 class ProductLeastSellersFilter(ProductTopLeastSellersFilter):
     def base_queryset(self, filter_q):
         return Product.objects.least_sellers(self.request.user, filter_q)
+
+
+class ProductTopProfitableFilter(ProductTopLeastSellersFilter):
+    def base_queryset(self, filter_q):
+        return Product.objects.most_profitable(self.request.user, filter_q)
+
+
+class ProductLeastProfitableFilter(ProductTopLeastSellersFilter):
+    def base_queryset(self, filter_q):
+        return Product.objects.least_profitable(self.request.user, filter_q)
