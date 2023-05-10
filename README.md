@@ -34,7 +34,7 @@ gti clone https://github.com/medycynka/EComerceAPI.git
 ```
 2. cd into EComerceAPI
 ```shell
-cd EComerceAPI
+cd ECommerceAPI
 ```
 3. create a virtual env
 ```shell

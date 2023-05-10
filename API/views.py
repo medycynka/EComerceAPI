@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import CreateAPIView
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ModelViewSet
@@ -44,6 +45,12 @@ class ProductModelViewSet(ModelViewSet):
         return [permission() for permission in permission_classes]
 
 
+class ProductListCreateAPIView(ListCreateAPIView):
+    serializer_class = ProductManageSerializer
+    queryset = Product.objects.select_related('category').all().order_by('-pk')
+    permission_classes = [AuthenticatedSellersOnly]
+
+
 class ProductTopSellersListAPIView(ListAPIView):
     serializer_class = ProductTopSellersSerializer
     queryset = Product.objects.none()
@@ -74,8 +81,10 @@ class OrderListAPIView(ListAPIView):
         user = self.request.user
 
         if user.is_authenticated:
-            if user.is_superuser or user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
+            if user.is_superuser:
                 return Order.objects.all().order_by("-pk")
+            if user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
+                return Order.objects.filter(orderproductlistitem__product__seller=user).order_by("-pk")
             return Order.objects.filter(client=user).order_by("-pk")
         return Order.objects.none()
 

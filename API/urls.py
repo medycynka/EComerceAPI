@@ -5,6 +5,7 @@ import API.views as views
 urlpatterns = [
     # API
     path('products/', views.ProductModelViewSet.as_view({'get': 'list'}), name='api_products_list'),
+    path('products/list-create/', views.ProductListCreateAPIView.as_view(), name='api_products_list_create'),
     path('products/create/', views.ProductModelViewSet.as_view({
         'post': 'create',
     }), name='api_product_create'),
