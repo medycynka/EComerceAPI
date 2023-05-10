@@ -71,13 +71,24 @@ class ProductManageSerializer(ModelSerializer):
         read_only_fields = ['id', 'thumbnail', 'seller']
 
 
-class ProductTopSellersSerializer(ModelSerializer):
+class ProductTopLeastSellersSerializer(ModelSerializer):
     category = ProductCategorySerializer()
     sells_count = serializers.IntegerField()
 
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
+        read_only_fields = ('id',)
+
+
+class ProductTopLeastProfitableSerializer(ModelSerializer):
+    category = ProductCategorySerializer()
+    sells_count = serializers.IntegerField()
+    total_profit = serializers.DecimalField(max_digits=18, decimal_places=2)
+
+    class Meta:
+        model = Product
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
         read_only_fields = ('id',)
 
 

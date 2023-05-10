@@ -88,7 +88,7 @@
                             <div class="row">
                                 <div class="col">
                                     <h6 class="">Total Cost</h6>
-                                    <h3 class="mb-2 number-font">{% random_int 10000 99999 True %} PLN</h3>
+                                    <h3 class="mb-2 number-font" id="totalCosts">{% random_int 10000 99999 %}</h3>
                                     <p class="text-muted mb-0">
                                         <span class="text-danger"><i class="fa fa-chevron-circle-down text-danger me-1"></i> 0.2%</span> last month
                                     </p>
@@ -169,6 +169,12 @@
 
     <script>
         (function() {
+            const totalCosts = document.getElementById('totalCosts');
+            totalCosts.innerHTML = new Intl.NumberFormat('en', {
+                notation: 'compact',
+                compactDisplay: 'long'
+            }).format(totalCosts.innerHTML) + ' PLN';
+
             const topSellersChart = new Chart(document.getElementById('topSellers'), {
                 type: 'bar',
                 data: {
@@ -208,7 +214,10 @@
                                     }
                                     if (context.parsed.y !== null) {
                                         if (context.datasetIndex > 0) {
-                                            label += Number(context.parsed.y).toFixed(3) + ' tys. PLN';
+                                            label += new Intl.NumberFormat('en', {
+                                                notation: 'compact',
+                                                compactDisplay: 'long'
+                                            }).format(context.parsed.y * 1000) + ' PLN';
                                         } else {
                                             label += context.parsed.y.toString();
                                         }
@@ -289,7 +298,10 @@
                                     }
                                     if (context.parsed.y !== null) {
                                         if (context.datasetIndex > 0) {
-                                            label += Number(context.parsed.y).toFixed(3) + ' tys. PLN';
+                                            label += new Intl.NumberFormat('en', {
+                                                notation: 'compact',
+                                                compactDisplay: 'long'
+                                            }).format(context.parsed.y) + ' PLN';
                                         } else {
                                             label += context.parsed.y.toString();
                                         }
@@ -348,7 +360,7 @@
             `;
             const ordersQuery = `
                 {
-                  allOrders {
+                  allOrders(dateFrom: "${moment().subtract(6, 'month').format('YYYY-MM-DD hh:mm:ss')}") {
                     isPaid
                   }
                 }
@@ -365,13 +377,14 @@
                     const initialSum = 0;
                     const sellsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum);
                     const profitsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum);
+                    const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
 
-                    document.getElementById('totalSales').innerHTML = sellsSumWithInitial.toString();
+                    document.getElementById('totalSales').innerHTML = formatter.format(sellsSumWithInitial);
 
                     document.getElementById('topSellingProduct').innerHTML = topTen[0].name;
-                    document.getElementById('topSellingProductProfit').innerHTML = `${(topTen[0].sellsCount * Number(topTen[0].price)).toFixed(2)} PLN`;
+                    document.getElementById('topSellingProductProfit').innerHTML = `${formatter.format(topTen[0].sellsCount * Number(topTen[0].price))} PLN`;
 
-                    document.getElementById('totalProfit').innerHTML = `${profitsSumWithInitial.toFixed(2)} PLN`;
+                    document.getElementById('totalProfit').innerHTML = `${formatter.format(profitsSumWithInitial)} PLN`;
 
                     const currentMonthSalesQuery = `
                         {
@@ -386,9 +399,9 @@
                     getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: currentMonthSalesQuery}), (data) => {
                         const initialSum = 0;
 
-                        document.getElementById('totalSalesThisMonth').innerHTML = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum).toString();
+                        document.getElementById('totalSalesThisMonth').innerHTML = formatter.format(data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum));
 
-                        document.getElementById('totalProfitThisMonth').innerHTML = `${data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum).toFixed(2)} PLN`;
+                        document.getElementById('totalProfitThisMonth').innerHTML = `${formatter.format(data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum))} PLN`;
                     });
                 }
             });
@@ -402,8 +415,9 @@
                 }
             });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
-                const paid = data.data.allOrders.filter(order => order.is_paid).length;
+                const paid = data.data.allOrders.filter(order => order.isPaid).length;
                 const unpaid = data.data.allOrders.length - paid;
+                const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
 
                 recentOrdersChart.data.datasets[0].data = [
                     paid,
@@ -411,8 +425,8 @@
                 ];
                 recentOrdersChart.update();
 
-                document.getElementById('paidOrders').innerHTML = paid.toString();
-                document.getElementById('unpaidOrders').innerHTML = unpaid.toString();
+                document.getElementById('paidOrders').innerHTML = formatter.format(paid);
+                document.getElementById('unpaidOrders').innerHTML = formatter.format(unpaid);
             });
         })();
     </script>

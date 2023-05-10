@@ -40,6 +40,24 @@ class ProductManager(models.Manager):
 
         return q
 
+    def counted_sales(self, seller: User, filter_q: Q = None):
+        """
+        Get products annotated with the total number of copies sold
+        :param seller: user model representing 'seller'
+        :param filter_q: optional filter for filtering products list before ordering based on purchased counts (ex. get
+        list of products form date range)
+        :return: products with the total number of copies sold
+        """
+
+        return self.products_by_seller(seller, filter_q).select_related('category').prefetch_related(
+            'orderproductlistitem_set__order'
+        ).annotate(
+            sells_count=Coalesce(
+                models.Sum('orderproductlistitem__quantity'),
+                Cast(0, models.PositiveIntegerField())
+            )
+        )
+
     def top_sellers(self, seller: User, filter_q: Q = None):
         """
         Get products in order from most to least frequently purchased
@@ -48,11 +66,7 @@ class ProductManager(models.Manager):
         list of products form date range)
         :return: products in order from most to least frequently purchased
         """
-        q = self.products_by_seller(seller, filter_q).select_related('category').prefetch_related('orderproductlistitem_set__order')
-
-        return q.annotate(
-            sells_count=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField()))
-        ).order_by('-sells_count')
+        return self.counted_sales(seller, filter_q).order_by('-sells_count')
 
     def least_sellers(self, seller: User, filter_q: Q = None):
         """
@@ -62,11 +76,43 @@ class ProductManager(models.Manager):
         list of products form date range)
         :return: products in order from least to most frequently purchased
         """
-        q = self.products_by_seller(seller, filter_q).select_related('category').prefetch_related('orderproductlistitem_set__order')
+        return self.counted_sales(seller, filter_q).order_by('sells_count')
 
-        return q.annotate(
-            sells_count=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField()))
-        ).order_by('sells_count')
+    def counted_profits(self, seller: User, filter_q: Q = None):
+        """
+        Get products annotated with the total profit
+        :param seller: user model representing 'seller'
+        :param filter_q: optional filter for filtering products list before ordering based on purchased counts (ex. get
+        list of products form date range)
+        :return: products with the total profit
+        """
+        return self.counted_sales(seller, filter_q).annotate(
+            total_profit=Coalesce(
+                F('price') * Cast(F('sells_count'), models.DecimalField(decimal_places=2, max_digits=18)),
+                Cast(0.0, models.DecimalField(decimal_places=2, max_digits=24)),
+                output_field=models.DecimalField(decimal_places=2, max_digits=24)
+            )
+        )
+
+    def most_profitable(self, seller: User, filter_q: Q = None):
+        """
+        Get products in order from most to least profitable
+        :param seller: user model representing 'seller'
+        :param filter_q: optional filter for filtering products list before ordering based on purchased counts (ex. get
+        list of products form date range)
+        :return: products in order from most to profitable
+        """
+        return self.counted_profits(seller, filter_q).order_by('-total_profit')
+
+    def least_profitable(self, seller: User, filter_q: Q = None):
+        """
+        Get products in order from least to most profitable
+        :param seller: user model representing 'seller'
+        :param filter_q: optional filter for filtering products list before ordering based on purchased counts (ex. get
+        list of products form date range)
+        :return: products in order from least to most profitable
+        """
+        return self.counted_profits(seller, filter_q).order_by('total_profit')
 
 
 class Product(models.Model):
