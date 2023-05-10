@@ -43,7 +43,7 @@ class ProductTopLeastSellersFilter(filters.FilterSet):
         fields = []
 
     def __init__(self, *args, **kwargs):
-        super(ProductTopLeastSellersFilter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.form.fields['date_from'].input_formats = settings.DATETIME_INPUT_FORMATS
         self.form.fields['date_to'].input_formats = settings.DATETIME_INPUT_FORMATS
@@ -67,9 +67,9 @@ class ProductTopLeastSellersFilter(filters.FilterSet):
 
 class ProductTopSellersFilter(ProductTopLeastSellersFilter):
     def base_queryset(self, filter_q):
-        return Product.top_sellers(self.request.user, filter_q)
+        return Product.objects.top_sellers(self.request.user, filter_q)
 
 
 class ProductLeastSellersFilter(ProductTopLeastSellersFilter):
     def base_queryset(self, filter_q):
-        return Product.least_sellers(self.request.user, filter_q)
+        return Product.objects.least_sellers(self.request.user, filter_q)

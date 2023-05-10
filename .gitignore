@@ -16,12 +16,9 @@ media/**
 !media/photos/gitkeep.jpg
 !media/thumbnails
 !media/thumbnails/gitkeep.jpg
-invoices/**
-!invoices/.gitkeep.jpg
 **/migrations/**
 !**/migrations
 !**/migrations/__init__.py
-!**/migrations/0001_initial.py
 nconf/nginx.conf
 
 # If your build process includes running collectstatic, then you probably don't need or want to include staticfiles/

@@ -5,33 +5,52 @@ from graphene_django import DjangoObjectType
 
 from API.models import ProductCategory
 from API.models import Product
+from API.models import Address
 from API.models import Order
+from API.models import OrderProductListItem
 
 
 class ProductCategoryType(DjangoObjectType):
     class Meta:
         model = ProductCategory
-        fields = "__all__"
+        fields = ('id', 'name',)
 
 
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = "__all__"
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
 
 
 class ProductStatisticType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = "__all__"
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
 
     sells_count = graphene.Int()
+
+
+class AddressType(DjangoObjectType):
+    class Meta:
+        model = Address
+        fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code', 'state')
+
+    short_address = graphene.String()
+    full_address = graphene.String()
+
+
+class OrderProductListItemType(DjangoObjectType):
+    class Meta:
+        model = OrderProductListItem
+        fields = ('id', 'product', 'quantity')
 
 
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
-        fields = "__all__"
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'is_paid')
+
+    products_list = graphene.List(OrderProductListItemType)
 
 
 def get_date_range_product_filter_from_kwargs(**kwargs):
@@ -68,19 +87,19 @@ class APIQuery(graphene.ObjectType):
             return None
 
     def resolve_all_products(self, info):
-        return Product.objects.all()
+        return Product.objects.select_related('category').all()
 
     def resolve_product(self, info, id):
         try:
-            return Product.objects.get(pk=id)
+            return Product.objects.select_related('category').get(pk=id)
         except Product.DoesNotExist:
             return None
 
     def resolve_top_sellers(self, info, **kwargs):
-        return Product.top_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+        return Product.objects.top_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
 
     def resolve_least_sellers(self, info, **kwargs):
-        return Product.least_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+        return Product.objects.least_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
 
     def resolve_all_orders(self, info):
         return Order.objects.all()

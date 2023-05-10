@@ -1,5 +1,7 @@
 from django.urls import path
 
+from rest_framework.schemas import get_schema_view
+
 import API.views as views
 
 urlpatterns = [
@@ -23,4 +25,23 @@ urlpatterns = [
     path('orders/', views.OrderListAPIView.as_view(), name='api_orders_list'),
     path('orders/create/', views.OrderCreateAPIView.as_view(), name='api_order_create'),
     path('users/create/', views.UserCreateAPIView.as_view(), name='api_user_create'),
+    path('address/', views.AddressModelViewSet.as_view({'get': 'list'}), name='api_addresses_list'),
+    path('address/create/', views.AddressModelViewSet.as_view({
+        'post': 'create',
+    }), name='api_address_create'),
+    path('address/manage/<pk>/', views.AddressModelViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'destroy'
+    }), name='api_address_manage'),
+    path('address/<pk>/', views.AddressModelViewSet.as_view({
+        'get': 'retrieve',
+    }), name='api_address_detail'),
+    # Schema
+    path('openapi/', get_schema_view(
+        title="E-commerce API",
+        description="API for managing (creating, editing, deleting and retrieving) e-commerce models",
+        version="1.0.0"
+    ), name='api_openapi_schema'),
 ]

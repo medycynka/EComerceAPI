@@ -6,7 +6,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.generics import CreateAPIView
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,9 +15,11 @@ from API.api_permissions import AuthenticatedClientsOnly
 from API.api_permissions import AuthenticatedSellersOnly
 from API.models import Product
 from API.models import Order
+from API.models import Address
 from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
 from API.serializers import ProductTopSellersSerializer
+from API.serializers import AddressSerializer
 from API.serializers import OrderSerializer
 from API.serializers import OrderCreateSerializer
 from API.serializers import UserCreateSerializer
@@ -59,7 +61,7 @@ class ProductTopSellersListAPIView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return Product.top_sellers(self.request.user)
+        return Product.objects.top_sellers(self.request.user)
 
 
 class ProductLeastSellersListAPIView(ListAPIView):
@@ -70,7 +72,20 @@ class ProductLeastSellersListAPIView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        return Product.least_sellers(self.request.user)
+        return Product.objects.least_sellers(self.request.user)
+
+
+class AddressModelViewSet(ModelViewSet):
+    serializer_class = AddressSerializer
+    queryset = Address.objects.all()
+    permission_classes = [AuthenticatedSellersOnly]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
 
 class OrderListAPIView(ListAPIView):

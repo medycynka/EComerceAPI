@@ -48,7 +48,7 @@ env\scripts\activate
 ```shell
 pip install -r requirements.txt
 ```
-6. Make Migrations
+6. Make Migrations (if you want to save then in your repo - which is no recommended - exclude them from .gitignore file)
 ```shell
 py manage.py makemigrations
 ```
