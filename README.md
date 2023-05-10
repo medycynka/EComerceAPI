@@ -30,9 +30,9 @@ The application requires the following installations to operate:
 ## Project Setup Instructions
 1) git clone the repository 
 ```shell
-gti clone https://github.com/medycynka/EComerceAPI.git
+gti clone https://github.com/medycynka/ECommerceAPI.git
 ```
-2. cd into EComerceAPI
+2. cd into ECommerceAPI
 ```shell
 cd ECommerceAPI
 ```
