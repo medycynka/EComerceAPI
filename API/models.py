@@ -1,13 +1,14 @@
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.text import gettext_lazy as _
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
+from django.db.models.functions import ExtractMonth
 
 from PIL import Image
 import os
@@ -31,6 +32,11 @@ class ProductCategory(models.Model):
 
 class ProductManager(models.Manager):
     def products_by_seller(self, seller: User, filter_q: Q = None):
+        """
+        :param seller: user with 'seller' role
+        :param filter_q: additional filtering expression
+        :return: All products of given seller
+        """
         q = self.get_queryset()
 
         if filter_q:
@@ -233,6 +239,19 @@ class Address(models.Model):
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
 
+class OrderManager(models.Manager):
+    def sales_by_months(self, year: int = None):
+        if year is None:
+            year = timezone.now().year  # if year is not provided, group by current years months
+
+        q = self.get_queryset().filter(order_date__year=year).prefetch_related('orderproductlistitem_set')
+
+        return q.annotate(month=ExtractMonth('order_date')).values('month').annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        ).order_by('month')
+
+
 class Order(models.Model):
     client = models.ForeignKey(User, verbose_name=_("Client"), null=True, on_delete=models.SET_NULL)
     order_address = models.ForeignKey('API.Address', verbose_name=_("Order address"), null=True, on_delete=models.SET_NULL)
@@ -241,6 +260,8 @@ class Order(models.Model):
     full_price = models.DecimalField(verbose_name=_('Order summary price'), blank=True, null=True, decimal_places=2,
                                      max_digits=20)
     is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
+
+    objects = OrderManager()
 
     class Meta:
         db_table = "API_order"

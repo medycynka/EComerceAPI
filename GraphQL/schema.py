@@ -59,6 +59,12 @@ class SalesAndProfitsType(graphene.ObjectType):
     total_profits = graphene.Decimal()
 
 
+class MonthlySalesAndProfitsType(graphene.ObjectType):
+    month = graphene.Int()
+    sales = graphene.BigInt()
+    profits = graphene.Decimal()
+
+
 def get_date_range_product_filter_from_kwargs(**kwargs):
     date_from_limit = kwargs.get("date_from", None)
     date_to_limit = kwargs.get("date_to", None)
@@ -81,18 +87,30 @@ class APIQuery(graphene.ObjectType):
                                 date_from=graphene.String(required=False),
                                 date_to=graphene.String(required=False)
                                 )
+    top_seller = graphene.Field(ProductStatisticType,
+                                date_from=graphene.String(required=False),
+                                date_to=graphene.String(required=False))
     least_sellers = graphene.List(ProductStatisticType,
                                   date_from=graphene.String(required=False),
                                   date_to=graphene.String(required=False)
                                   )
+    least_seller = graphene.Field(ProductStatisticType,
+                                  date_from=graphene.String(required=False),
+                                  date_to=graphene.String(required=False))
     most_profitable = graphene.List(ProductStatisticType,
                                     date_from=graphene.String(required=False),
                                     date_to=graphene.String(required=False)
                                     )
+    most_profitable_single = graphene.Field(ProductStatisticType,
+                                            date_from=graphene.String(required=False),
+                                            date_to=graphene.String(required=False))
     least_profitable = graphene.List(ProductStatisticType,
                                      date_from=graphene.String(required=False),
                                      date_to=graphene.String(required=False)
                                      )
+    least_profitable_single = graphene.Field(ProductStatisticType,
+                                             date_from=graphene.String(required=False),
+                                             date_to=graphene.String(required=False))
     all_orders = graphene.List(OrderType,
                                date_from=graphene.String(required=False),
                                date_to=graphene.String(required=False)
@@ -102,6 +120,7 @@ class APIQuery(graphene.ObjectType):
                                              date_from=graphene.String(required=False),
                                              date_to=graphene.String(required=False)
                                              )
+    monthly_sales_and_profits = graphene.List(MonthlySalesAndProfitsType, year=graphene.Int(required=False))
 
     def resolve_all_categories(self, info):
         return ProductCategory.objects.all()
@@ -124,14 +143,34 @@ class APIQuery(graphene.ObjectType):
     def resolve_top_sellers(self, info, **kwargs):
         return Product.objects.top_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
 
+    def resolve_top_seller(self, info, **kwargs):
+        return Product.objects.top_sellers(
+            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
+        ).first()
+
     def resolve_least_sellers(self, info, **kwargs):
         return Product.objects.least_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+
+    def resolve_least_seller(self, info, **kwargs):
+        return Product.objects.least_sellers(
+            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
+        ).first()
 
     def resolve_most_profitable(self, info, **kwargs):
         return Product.objects.most_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
 
+    def resolve_most_profitable_single(self, info, **kwargs):
+        return Product.objects.most_profitable(
+            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
+        ).first()
+
     def resolve_least_profitable(self, info, **kwargs):
         return Product.objects.least_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+
+    def resolve_least_profitable_single(self, info, **kwargs):
+        return Product.objects.least_profitable(
+            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
+        ).first()
 
     def resolve_all_orders(self, info, **kwargs):
         date_from_limit = kwargs.get("date_from", None)
@@ -157,6 +196,9 @@ class APIQuery(graphene.ObjectType):
         return Product.objects.most_profitable(
             info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
         ).aggregate(total_sales=Sum('sells_count'), total_profits=Sum('total_profit'))
+
+    def resolve_monthly_sales_and_profits(self, info, year):
+        return Order.objects.sales_by_months(year)
 
 
 schema = graphene.Schema(query=APIQuery)
