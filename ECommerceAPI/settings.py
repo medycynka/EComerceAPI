@@ -158,7 +158,10 @@ REST_FRAMEWORK = {
 
 # Graphene
 GRAPHENE = {
-    "SCHEMA": "GraphQL.schema.schema"
+    "SCHEMA": "GraphQL.schema.schema",
+    'MIDDLEWARE': [
+        'graphene_django.debug.DjangoDebugMiddleware',
+    ],
 }
 
 # Custom project variables

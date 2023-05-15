@@ -109,10 +109,10 @@
         <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Top sellers</h3>
+                    <h3 class="card-title">Monthly sales</h3>
                 </div>
                 <div class="card-body pb-0">
-                    <canvas id="topSellers" class="chart-donut"></canvas>
+                    <canvas id="monthlySales" class="chart-donut"></canvas>
                 </div>
             </div>
         </div>
@@ -144,7 +144,17 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Top sellers</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <canvas id="topSellers" class="chart-donut"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-6">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Least sellers</h3>
@@ -165,6 +175,7 @@
 
     <!-- INTERNAL CHART JS -->
     <script src="{% static 'assets/plugins/chart/chart.umd.min.js' %}"></script>
+    <script src="{% static 'assets/plugins/chart/utils.js' %}"></script>
     <script src="{% static 'assets/js/apexcharts.js' %}"></script>
 
     <script>
@@ -175,6 +186,68 @@
                 compactDisplay: 'long'
             }).format(totalCosts.innerHTML) + ' PLN';
 
+            // Change it to actual local language if needed
+            //moment.locale('en');
+
+            const monthlySellsChart = new Chart(document.getElementById('monthlySales'), {
+                type: 'line',
+                data: {
+                    labels: moment.months(),
+                    datasets: [
+                        {
+                            label: "Sells count",
+                            data: Array.from({length: 12}, (v, k) => 0),
+                            borderColor: 'rgb(94, 216, 79)',
+                            backgroundColor: 'rgba(94, 216, 79, 0.5)',
+                            fill: false,
+                            tension: 0.4,
+                        },
+                        {
+                            label: "Profits",
+                            data: Array.from({length: 12}, (v, k) => 0),
+                            borderColor: 'rgb(159, 120, 255)',
+                            backgroundColor: 'rgba(159, 120, 255, 0.5)',
+                            fill: true,
+                            tension: 0.4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Monthly sells'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en', {
+                                            notation: 'compact',
+                                            compactDisplay: 'long'
+                                        }).format(context.parsed.y * (context.datasetIndex > 0 ? 1000 : 1)) + (context.datasetIndex > 0 ? ' PLN' : '');
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                },
+            });
             const topSellersChart = new Chart(document.getElementById('topSellers'), {
                 type: 'bar',
                 data: {
@@ -365,7 +438,28 @@
                   }
                 }
             `;
+            const monthlySalesQuery = `
+                {
+                  monthlySalesAndProfits{
+                    month
+                    sales
+                    profits
+                  }
+                }
+            `;
 
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: monthlySalesQuery}), (data) => {
+                console.log(data.data.monthlySalesAndProfits);
+                const monthlySales = data.data.monthlySalesAndProfits;
+                if (monthlySales.length > 0) {
+                    for (let i = 0; i < monthlySales.length; i++) {
+                        monthlySellsChart.data.datasets[0].data[monthlySales[i].month - 1] = monthlySales[i].sales;
+                        monthlySellsChart.data.datasets[1].data[monthlySales[i].month - 1] = Number(monthlySales[i].profits) / 1000;
+                    }
+                    monthlySellsChart.update();
+                    console.log(monthlySellsChart.data.datasets);
+                }
+            });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topSellersQuery}), (data) => {
                 if (data.data.topSellers.length > 0) {
                     const topTen = data.data.topSellers.slice(0, 9);

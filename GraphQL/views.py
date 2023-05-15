@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
 
-# Create your views here.
+from graphene_django.views import GraphQLView
+
+from API.mixins import AdminAndSellerOnlyMixin
+
+
+class PrivateGraphQLView(AdminAndSellerOnlyMixin, GraphQLView):
+    pass

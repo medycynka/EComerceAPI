@@ -8,6 +8,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
+from django.db.models.functions import ExtractMonth
+from django.db.models.functions import ExtractDay
+from django.db.models.functions import ExtractYear
 
 from PIL import Image
 import os
@@ -31,6 +34,11 @@ class ProductCategory(models.Model):
 
 class ProductManager(models.Manager):
     def products_by_seller(self, seller: User, filter_q: Q = None):
+        """
+        :param seller: user with 'seller' role
+        :param filter_q: additional filtering expression
+        :return: All products of given seller
+        """
         q = self.get_queryset()
 
         if filter_q:
@@ -233,6 +241,65 @@ class Address(models.Model):
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
 
+class OrderManager(models.Manager):
+    def __combine_user_filter_q(self, user: User) -> Q:
+        user_q = Q()
+        if user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
+            user_q = Q(orderproductlistitem_set__product__seller=user)
+        elif user.groups.filter(name=settings.USER_CLIENT_GROUP_NAME).exists():
+            user_q = Q(client=user)
+        return user_q
+
+    def sales_by_day(self, user: User, day: int, month:int, year: int = None):
+        filter_q = Q(order_date__day=day) & Q(order_date__month=month) & Q(order_date__year=year)
+        user_q = self.__combine_user_filter_q(user)
+
+        if user_q:
+            filter_q.add(user_q, Q.AND)
+
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
+
+        return q.annotate(day=ExtractDay('order_date')).values('day').annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        ).values('sales', 'profits')
+
+    def today_sales(self, user: User):
+        today = timezone.now()
+
+        return self.sales_by_day(user, today.day, today.month, today.year)
+
+    def sales_by_month_days(self, user: User, month: int, year: int = None):
+        filter_q = Q(order_date__month=month) & Q(order_date__year=year)
+        user_q = self.__combine_user_filter_q(user)
+
+        if user_q:
+            filter_q.add(user_q, Q.AND)
+
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
+
+        return q.annotate(day=ExtractDay('order_date')).values('day').annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        )
+
+    def sales_by_months(self, user: User, year: int = None):
+        if year is None:
+            year = timezone.now().year  # if year is not provided, group by current years months
+        filter_q = Q(order_date__year=year)
+        user_q = self.__combine_user_filter_q(user)
+
+        if user_q:
+            filter_q.add(user_q, Q.AND)
+
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
+
+        return q.annotate(month=ExtractMonth('order_date')).values('month').annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        ).order_by('month')
+
+
 class Order(models.Model):
     client = models.ForeignKey(User, verbose_name=_("Client"), null=True, on_delete=models.SET_NULL)
     order_address = models.ForeignKey('API.Address', verbose_name=_("Order address"), null=True, on_delete=models.SET_NULL)
@@ -241,6 +308,8 @@ class Order(models.Model):
     full_price = models.DecimalField(verbose_name=_('Order summary price'), blank=True, null=True, decimal_places=2,
                                      max_digits=20)
     is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
+
+    objects = OrderManager()
 
     class Meta:
         db_table = "API_order"
