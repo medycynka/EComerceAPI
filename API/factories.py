@@ -127,10 +127,17 @@ class OrderFactory(DjangoModelFactory):
     client = factory.Iterator(Group.objects.get(name=settings.USER_CLIENT_GROUP_NAME).user_set.all())
     order_address = factory.Iterator(Address.objects.all())
     is_paid = factory.LazyFunction(lambda: random.uniform(0, 1) > 0.3)
+    order_date = factory.LazyFunction(
+        lambda: fake.date_time_between(
+            datetime.now() - timedelta(days=365),
+            datetime.now() + timedelta(days=365),
+            tzinfo=timezone.get_current_timezone()
+        ),
+    )
 
     @factory.post_generation
     def random_product_list(self, create, extracted, **kwargs):
-        count = random.randint(min(max(1, kwargs.get('count', 3)), 8), 16)
+        count = random.randint(min(max(1, kwargs.get('count', 1)), 8), 16)
         products = [ids for ids in Product.objects.all().values_list('id', flat=True)]
         products = random.sample(products, count)
         OrderProductListItem.objects.bulk_create([
