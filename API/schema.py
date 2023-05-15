@@ -147,7 +147,7 @@ class APIQuery(graphene.ObjectType):
         ).aggregate(total_sales=Sum('sells_count'), total_profits=Sum('total_profit'))
 
     def resolve_monthly_sales_and_profits(self, info, **kwargs):
-        return Order.objects.sales_by_months(kwargs.get('year', None))
+        return Order.objects.sales_by_months(info.context.user, kwargs.get('year', None))
 
 
 schema = graphene.Schema(query=APIQuery)
