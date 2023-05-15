@@ -61,3 +61,9 @@ class MonthlySalesAndProfitsType(graphene.ObjectType):
     month = graphene.Int()
     sales = graphene.BigInt()
     profits = graphene.Decimal()
+
+
+class CountrySalesAndProfitsType(graphene.ObjectType):
+    country = graphene.String()
+    sales = graphene.BigInt()
+    profits = graphene.Decimal()

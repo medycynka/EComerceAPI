@@ -61,9 +61,6 @@ class ProductListTemplateView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        from API.models import Order
-        print(Order.objects.sales_by_month_days(self.request.user, 8, 2022))
-
         filter_class = ProductFilter()
         context['order_options'] = filter_class.filters['order'].field.choices
         context['category_options'] = ProductCategory.objects.all()
