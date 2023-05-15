@@ -6,12 +6,13 @@ from graphene_django.debug import DjangoDebug
 from API.models import ProductCategory
 from API.models import Product
 from API.models import Order
-from GraphQL.types import ProductCategoryType
-from GraphQL.types import ProductType
-from GraphQL.types import ProductStatisticType
-from GraphQL.types import OrderType
-from GraphQL.types import SalesAndProfitsType
-from GraphQL.types import MonthlySalesAndProfitsType
+from API.types import ProductCategoryType
+from API.types import ProductType
+from API.types import ProductStatisticType
+from API.types import OrderType
+from API.types import SalesAndProfitsType
+from API.types import MonthlySalesAndProfitsType
+from API.types import CountrySalesAndProfitsType
 
 
 def get_date_range_product_filter_from_kwargs(**kwargs):
@@ -70,6 +71,7 @@ class APIQuery(graphene.ObjectType):
                                              date_to=graphene.String(required=False)
                                              )
     monthly_sales_and_profits = graphene.List(MonthlySalesAndProfitsType, year=graphene.Int(required=False))
+    country_sales_and_profits = graphene.List(CountrySalesAndProfitsType)
 
     def resolve_all_categories(self, info):
         return ProductCategory.objects.all()
@@ -148,6 +150,9 @@ class APIQuery(graphene.ObjectType):
 
     def resolve_monthly_sales_and_profits(self, info, **kwargs):
         return Order.objects.sales_by_months(info.context.user, kwargs.get('year', None))
+
+    def resolve_country_sales_and_profits(self, info, **kwargs):
+        return Order.objects.sales_by_countries(info.context.user)
 
 
 schema = graphene.Schema(query=APIQuery)

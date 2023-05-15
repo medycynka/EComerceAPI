@@ -165,6 +165,18 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Sales by country</h3>
+                </div>
+                <div class="card-body">
+                    <div id="world-map-sales" class="worldh h-300"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 {% block custom_scripts %}
     <!-- INTERNAL ion.rangeSlider.min js -->
@@ -177,6 +189,10 @@
     <script src="{% static 'assets/plugins/chart/chart.umd.min.js' %}"></script>
     <script src="{% static 'assets/plugins/chart/utils.js' %}"></script>
     <script src="{% static 'assets/js/apexcharts.js' %}"></script>
+
+    <!-- INTERNAL Vector js -->
+    <script src="{% static 'assets/plugins/jvectormap/jquery-jvectormap-2.0.2.min.js' %}"></script>
+    <script src="{% static 'assets/plugins/jvectormap/jquery-jvectormap-world-mill-en.js' %}"></script>
 
     <script>
         (function() {
@@ -447,6 +463,15 @@
                   }
                 }
             `;
+            const countrySalesQuery = `
+                {
+                  countrySalesAndProfits{
+                    country
+                    sales
+                    profits
+                  }
+                }
+            `;
 
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: monthlySalesQuery}), (data) => {
                 console.log(data.data.monthlySalesAndProfits);
@@ -521,6 +546,49 @@
 
                 document.getElementById('paidOrders').innerHTML = formatter.format(paid);
                 document.getElementById('unpaidOrders').innerHTML = formatter.format(unpaid);
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: countrySalesQuery}), (data) => {
+                $(function() {
+                    const salesAndProfits = {};
+                    const countriesNormalized = {};
+                    const countryData = data.data.countrySalesAndProfits;
+                    for (let i = 0; i < countryData.length; i++) {
+                        const countryCode = countryData[i].country !== 'en' ? countryData[i].country.toUpperCase() : 'GB';
+                        salesAndProfits[countryCode] = {sales: countryData[i].sales, profits: countryData[i].profits};
+                        countriesNormalized[countryCode] = countryData[i].profits;
+                    }
+                    const countrySales = $('#world-map-sales').vectorMap({
+                        map: 'world_mill_en',
+                        series: {
+                            regions: [{
+                                values: countriesNormalized,
+                                scale: ['#C8EEFF', '#0071A4'],
+                                normalizeFunction: 'polynomial',
+                                attribute: 'fill',
+                                legend: {
+                                    vertical: true,
+                                    title: 'Profits',
+                                    labelRender: function (value) {
+                                        return new Intl.NumberFormat('en', {
+                                            notation: 'compact',
+                                            compactDisplay: 'long'
+                                        }).format(value) + ' PLN'
+                                    }
+                                },
+                            }]
+                        },
+                        onRegionTipShow: function (e, el, code) {
+                            const formatter = new Intl.NumberFormat('en', {
+                                notation: 'compact',
+                                compactDisplay: 'long'
+                            });
+                            const data = salesAndProfits[code];
+                            const sales = formatter.format(data ? data.sales : 0);
+                            const profits = formatter.format(data ? data.profits : 0);
+                            el.html(el.html() + ' Sales: ' + sales + ' Profits: ' + profits + ' PLN');
+                        }
+                    });
+                });
             });
         })();
     </script>

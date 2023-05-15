@@ -1,7 +1,7 @@
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import F, Q, QuerySet
 from django.utils import timezone
 from django.utils.text import gettext_lazy as _
 from django.conf import settings
@@ -15,7 +15,7 @@ from django.db.models.functions import ExtractYear
 from PIL import Image
 import os
 from io import BytesIO
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Create your models here.
 
@@ -243,6 +243,10 @@ class Address(models.Model):
 
 class OrderManager(models.Manager):
     def __combine_user_filter_q(self, user: User) -> Q:
+        """
+        :param user: user model
+        :return: Q object representing query filter based on passed user
+        """
         user_q = Q()
         if user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
             user_q = Q(orderproductlistitem_set__product__seller=user)
@@ -250,40 +254,68 @@ class OrderManager(models.Manager):
             user_q = Q(client=user)
         return user_q
 
-    def sales_by_day(self, user: User, day: int, month:int, year: int = None):
-        filter_q = Q(order_date__day=day) & Q(order_date__month=month) & Q(order_date__year=year)
+    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str) -> QuerySet:
+        """
+        Group queryset by `group_key` and annotate corresponding groups its sales and profits
+        :param queryset: orders queryset
+        :param group_key: grouping key ex. 'months'
+        :return: grouped queryset with annotated total sales and profits
+        """
+        return queryset.values(group_key).annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        )
+
+    def sales_by_day(self, user: User, date: datetime) -> QuerySet:
+        """
+        :param user: user model
+        :param date: specific day in which we want to count sales and profits, ex 21-04-2023
+        :return: total sales and profits in provided date
+        """
+        filter_q = Q(order_date__day=date.day) & Q(order_date__month=date.month) & Q(order_date__year=date.year)
         user_q = self.__combine_user_filter_q(user)
 
         if user_q:
             filter_q.add(user_q, Q.AND)
 
-        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set').annotate(
+            day=ExtractDay('order_date')
+        )
 
-        return q.annotate(day=ExtractDay('order_date')).values('day').annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
-            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
-        ).values('sales', 'profits')
+        return self.__annotate_sales_and_profits(q, 'day').values('sales', 'profits')
 
-    def today_sales(self, user: User):
-        today = timezone.now()
+    def today_sales(self, user: User) -> QuerySet:
+        """
+        :param user: user model
+        :return: total sales and profits in current date
+        """
+        return self.sales_by_day(user, timezone.now())
 
-        return self.sales_by_day(user, today.day, today.month, today.year)
-
-    def sales_by_month_days(self, user: User, month: int, year: int = None):
+    def sales_by_month_days(self, user: User, month: int, year: int = None) -> QuerySet:
+        """
+        :param user: user model
+        :param month: month
+        :param year: year
+        :return: total sales and profit for each day of the month
+        """
         filter_q = Q(order_date__month=month) & Q(order_date__year=year)
         user_q = self.__combine_user_filter_q(user)
 
         if user_q:
             filter_q.add(user_q, Q.AND)
 
-        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
-
-        return q.annotate(day=ExtractDay('order_date')).values('day').annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
-            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set').annotate(
+            day=ExtractDay('order_date')
         )
 
-    def sales_by_months(self, user: User, year: int = None):
+        return self.__annotate_sales_and_profits(q, 'day')
+
+    def sales_by_months(self, user: User, year: int = None) -> QuerySet:
+        """
+        :param user: user model
+        :param year: year
+        :return: orders grouped by months with annotated total sales and profits in each month of provided year
+        """
         if year is None:
             year = timezone.now().year  # if year is not provided, group by current years months
         filter_q = Q(order_date__year=year)
@@ -292,12 +324,46 @@ class OrderManager(models.Manager):
         if user_q:
             filter_q.add(user_q, Q.AND)
 
-        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set')
+        q = self.get_queryset().filter(filter_q).prefetch_related('orderproductlistitem_set').annotate(
+            month=ExtractMonth('order_date')
+        )
 
-        return q.annotate(month=ExtractMonth('order_date')).values('month').annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
-            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
-        ).order_by('month')
+        return self.__annotate_sales_and_profits(q, 'month').order_by('month')
+
+    def sales_by_years(self, user: User) -> QuerySet:
+        """
+        :param user: user model
+        :return: orders grouped by years with annotated total sales and profits in each year
+        """
+        user_q = self.__combine_user_filter_q(user)
+
+        if user_q:
+            q = self.get_queryset().filter(user_q).prefetch_related('orderproductlistitem_set')
+        else:
+            q = self.get_queryset().prefetch_related('orderproductlistitem_set')
+
+        q = q.annotate(year=ExtractYear('order_date'))
+
+        return self.__annotate_sales_and_profits(q, 'year').order_by('year')
+
+    def sales_by_countries(self, user: User) -> QuerySet:
+        """
+        :param user: user model
+        :return: orders grouped by country of order address with annotated total sales and profits in each country
+        """
+
+        user_q = self.__combine_user_filter_q(user)
+
+        if user_q:
+            q = self.get_queryset().filter(user_q).prefetch_related('orderproductlistitem_set').select_related(
+                'order_address'
+            ).annotate(country=F('order_address__country'))
+        else:
+            q = self.get_queryset().prefetch_related('orderproductlistitem_set').select_related(
+                'order_address'
+            ).annotate(country=F('order_address__country'))
+
+        return self.__annotate_sales_and_profits(q, 'country')
 
 
 class Order(models.Model):
@@ -319,6 +385,7 @@ class Order(models.Model):
         """
         :return: :model:`Common.Product` list associated with this order
         """
+        Order.objects.filter(order_address__country='pl').select_related('order_address')
         return OrderProductListItem.objects.select_related('product', 'product__category').filter(
             order=self
         ).only('product', 'quantity')
