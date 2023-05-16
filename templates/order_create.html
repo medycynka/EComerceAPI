@@ -1,6 +1,5 @@
 {% extends 'basic.html' %}
-{% load static custom_project_templatetags %}
-{% load static %}
+{% load static crispy_forms_filters custom_project_templatetags %}
 {% block styles_content %}
     <style>
         .select2{
@@ -8,6 +7,13 @@
         }
         .table-bordered>:not(caption)>* {
             border-width: 1px 0;
+        }
+        select.countryselectwidget{
+            width: 90%;
+        }
+        img.country-select-flag{
+            margin: 0 4px 0 !important;
+            height: 16px;
         }
     </style>
 {% endblock %}
@@ -74,12 +80,33 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-12 mb-0">
-                                <div id="div_id_name" class="mb-3">
-                                    <label for="id_address" class="form-label requiredField">
-                                        Shipping address<span class="asteriskField">*</span>
-                                    </label>
-                                    <input type="text" name="address" placeholder="Adres dostawy" maxlength="255" class="textinput textInput form-control" required="" id="id_address">
-                                </div>
+                                {{ address_form.country|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6 mb-0">
+                                {{ address_form.street_number|as_crispy_field }}
+                            </div>
+                            <div class="form-group col-md-6 mb-0">
+                                {{ address_form.street_number_local|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.state|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-4 mb-0">
+                                {{ address_form.post_code|as_crispy_field }}
+                            </div>
+                            <div class="form-group col-md-8 mb-0">
+                                {{ address_form.city|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.street|as_crispy_field }}
                             </div>
                         </div>
                     </form>
@@ -125,6 +152,7 @@
     <script>
         const fullPrice = document.querySelector('td.text-end.full-price');
         const fullEndPrice = document.querySelector('td.text-end.full-end-price');
+        const stateSelectRow = $('select#id_state').closest('.form-row');
         const listContainer = $('.table-responsive>.table>tbody');
         let shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
         const updateFullPrice = () => {
@@ -150,9 +178,14 @@
         const orderDataSerializer = () => {
             const data = {
                 "client": "{{ request.user.id }}",
-                "order_address": document.querySelector('input#id_address').value,
+                "order_address": {},
                 "orderproductlistitem_set": [],
             };
+            $("form#clientDataForm").serializeArray().map(field => {
+               data["order_address"][field.name] = field.value;
+            });
+            delete data["order_address"]["name"];
+            delete data["order_address"]["surname"];
 
             const rows = listContainer[0].querySelectorAll('tr');
 
@@ -221,6 +254,16 @@
                 })
             }
         };
+
+        stateSelectRow.hide();
+        document.querySelector('select.countryselectwidget')?.addEventListener('change', function () {
+            console.log(this.value, this.value === 'PL', typeof this.value);
+            if (this.value === 'PL') {
+                stateSelectRow.show();
+            } else {
+                stateSelectRow.hide();
+            }
+        });
 
         for (let i = 0; i < shoppingCart.length; i++) {
             listContainer.append($(

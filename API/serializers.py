@@ -5,6 +5,8 @@ from django.conf import settings
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
+from django_countries.serializer_fields import CountryField
+
 from API.models import ProductCategory
 from API.models import Product
 from API.models import Address
@@ -102,6 +104,7 @@ class ProductListItemSerializer(ModelSerializer):
 
 
 class AddressSerializer(ModelSerializer):
+    country = CountryField(country_dict=True)
     short_address = serializers.CharField(read_only=True)
     full_address = serializers.CharField(read_only=True)
 
@@ -138,8 +141,8 @@ class OrderCreateSerializer(ModelSerializer):
 
     def create(self, validated_data):
         order_products = validated_data.pop('orderproductlistitem_set')
-        address = validated_data.pop('order_address')
-        order_address = Address.objects.create(**address)
+        address_data = validated_data.pop('order_address')
+        order_address = Address.objects.create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)
         products_list = [

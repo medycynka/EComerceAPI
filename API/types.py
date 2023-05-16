@@ -1,6 +1,8 @@
 import graphene
 from graphene_django import DjangoObjectType
 
+from django_countries.graphql.types import Country
+
 from API.models import ProductCategory
 from API.models import Product
 from API.models import Address
@@ -30,6 +32,8 @@ class ProductStatisticType(DjangoObjectType):
 
 
 class AddressType(DjangoObjectType):
+    country = graphene.Field(Country)
+
     class Meta:
         model = Address
         fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code', 'state')

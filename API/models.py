@@ -12,6 +12,8 @@ from django.db.models.functions import ExtractMonth
 from django.db.models.functions import ExtractDay
 from django.db.models.functions import ExtractYear
 
+from django_countries.fields import CountryField
+
 from PIL import Image
 import os
 from io import BytesIO
@@ -177,13 +179,6 @@ class Product(models.Model):
 
 
 class Address(models.Model):
-    class Countries(models.TextChoices):
-        """
-        Represents available shipping countries
-        """
-        PL = 'pl', _('Polska')
-        EN = 'en', _('England')
-
     class PolishStates(models.IntegerChoices):
         """
         Polish voivodeship
@@ -206,7 +201,7 @@ class Address(models.Model):
         WP = 15, _('Wielkopolskie')
         ZP = 16, _('Zachodnio-pomorskie')
 
-    country = models.CharField(_("Country"), choices=Countries.choices, blank=True, default=Countries.PL, max_length=8)
+    country = CountryField(verbose_name=_("Country"))
     city = models.CharField(_("City"), max_length=128)
     street = models.CharField(_("Street"), max_length=128)
     street_number = models.CharField(_("Street number"), max_length=16)
@@ -224,7 +219,7 @@ class Address(models.Model):
         street_number_local = "/" + self.street_number_local if self.street_number_local else ""
         voivodeship = " woj. " + self.get_state_display() if self.state != Address.PolishStates.NONE else ""
         return f'{self.street} {self.street_number}{street_number_local}, {self.post_code} {self.city}, ' \
-               f'{self.get_country_display()}{voivodeship}'
+               f'{self.country.name}{voivodeship}'
 
     @property
     def short_address(self):
@@ -236,7 +231,7 @@ class Address(models.Model):
         return self.__str__()
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if self.country != Address.Countries.PL and self.state != Address.PolishStates.NONE:
+        if self.country != "PL" and self.state != Address.PolishStates.NONE:
             self.state = Address.PolishStates.NONE
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
@@ -385,7 +380,6 @@ class Order(models.Model):
         """
         :return: :model:`Common.Product` list associated with this order
         """
-        Order.objects.filter(order_address__country='pl').select_related('order_address')
         return OrderProductListItem.objects.select_related('product', 'product__category').filter(
             order=self
         ).only('product', 'quantity')

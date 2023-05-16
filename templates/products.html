@@ -16,24 +16,26 @@
     {% csrf_token %}
 {% endblock %}
 {% block page_header_buttons %}
-    {% if request.user|is_seller or request.user.is_superuser %}
-        <div class="ms-auto pageheader-btn">
-            <a href="{% url 'product_create' %}" class="btn btn-primary btn-icon text-white me-2">
-                <span>
-                    <i class="fe fe-plus"></i>
-                </span> Add product
-            </a>
-        </div>
-    {% endif %}
-    {% if request.user|is_client or request.user.is_superuser %}
-        <div class="ms-auto pageheader-btn">
-            <a href="{% url 'order_create' %}" class="btn btn-secondary btn-icon text-white me-2">
-                <span>
-                    <i class="fe fe-shopping-cart"></i>
-                </span> Go to cart
-            </a>
-        </div>
-    {% endif %}
+    {% with request.user.is_superuser as user_is_admin %}
+        {% if request.user|is_seller or user_is_admin %}
+            <div class="ms-auto pageheader-btn">
+                <a href="{% url 'product_create' %}" class="btn btn-primary btn-icon text-white me-2">
+                    <span>
+                        <i class="fe fe-plus"></i>
+                    </span> Add product
+                </a>
+            </div>
+        {% endif %}
+        {% if request.user|is_client or user_is_admin %}
+            <div class="{% if not user_is_admin %}ms-auto {% endif %}pageheader-btn">
+                <a href="{% url 'order_create' %}" class="btn btn-secondary btn-icon text-white me-2">
+                    <span>
+                        <i class="fe fe-shopping-cart"></i>
+                    </span> Go to cart
+                </a>
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock %}
 {% block page_content %}
     <div class="row row-cards">

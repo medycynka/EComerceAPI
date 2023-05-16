@@ -43,6 +43,11 @@ INSTALLED_APPS = [
     ##
     'graphene_django',
     ##
+    'crispy_forms',
+    'crispy_bootstrap5',
+    ##
+    'debug_toolbar',
+    ##
     'API.apps.ApiConfig',
     'GraphQL.apps.GraphqlConfig',
     'UserInterface.apps.UserinterfaceConfig',
@@ -56,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'ECommerceAPI.urls'
@@ -163,6 +169,19 @@ GRAPHENE = {
         'graphene_django.debug.DjangoDebugMiddleware',
     ],
 }
+
+# Crispy forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Debug Toolbar
+if DEBUG:
+    INTERNAL_IPS = [
+        "127.0.0.1",
+    ]
+
+# Django countries
+COUNTRIES_FLAG_URL = "assets/flags/{code}.gif"
 
 # Custom project variables
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
