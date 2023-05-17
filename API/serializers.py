@@ -122,7 +122,8 @@ class OrderSerializer(ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'is_paid', 'products_list')
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
+                  'products_list')
         read_only_fields = ('id',)
 
     def get_products_list(self, obj):

@@ -1,5 +1,5 @@
 {% extends 'basic.html' %}
-{% load static custom_project_templatetags %}
+{% load static custom_project_templatetags countries %}
 {% load static %}
 {% block styles_content %}
     <style>
@@ -450,7 +450,7 @@
             const ordersQuery = `
                 {
                   allOrders(dateFrom: "${moment().subtract(6, 'month').format('YYYY-MM-DD hh:mm:ss')}") {
-                    isPaid
+                    status
                   }
                 }
             `;
@@ -534,7 +534,7 @@
                 }
             });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
-                const paid = data.data.allOrders.filter(order => order.isPaid).length;
+                const paid = data.data.allOrders.filter(order => order.status > 1).length;
                 const unpaid = data.data.allOrders.length - paid;
                 const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
 
@@ -548,6 +548,7 @@
                 document.getElementById('unpaidOrders').innerHTML = formatter.format(unpaid);
             });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: countrySalesQuery}), (data) => {
+                console.log(data);
                 $(function() {
                     const salesAndProfits = {};
                     const countriesNormalized = {};

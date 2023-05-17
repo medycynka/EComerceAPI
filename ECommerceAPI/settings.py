@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     ##
     'graphene_django',
     ##
+    'django_countries',
+    ##
     'crispy_forms',
     'crispy_bootstrap5',
     ##
@@ -93,7 +95,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-        "ATOMIC_REQUESTS": True,
     }
 }
 

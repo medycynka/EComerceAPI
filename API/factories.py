@@ -126,7 +126,7 @@ class OrderFactory(DjangoModelFactory):
 
     client = factory.Iterator(Group.objects.get(name=settings.USER_CLIENT_GROUP_NAME).user_set.all())
     order_address = factory.Iterator(Address.objects.all())
-    is_paid = factory.LazyFunction(lambda: random.uniform(0, 1) > 0.3)
+    status = factory.LazyFunction(lambda: random.randint(0, len(Order.OrderStatus.choices)))
     order_date = factory.LazyFunction(
         lambda: fake.date_time_between(
             datetime.now() - timedelta(days=365),
