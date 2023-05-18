@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'django_countries',
     ##
     'crispy_forms',
+    'crispy_bootstrap3',   # for drf and django_filters
+    'crispy_bootstrap4',   # for drf and django_filters
     'crispy_bootstrap5',
     ##
     'debug_toolbar',

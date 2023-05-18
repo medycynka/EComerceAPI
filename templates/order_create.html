@@ -220,7 +220,7 @@
 
             if (orderData["orderproductlistitem_set"].length > 0){
                 $.ajax({
-                    url: "{% url 'api_order_create' %}",
+                    url: "{% url 'api_orders-list' %}",
                     data: JSON.stringify(orderData),
                     type: 'POST',
                     headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},

@@ -18,7 +18,7 @@ class UserSerializer(ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('id', 'username', 'email')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'username', 'email')
 
 
 class UserCreateSerializer(ModelSerializer):
@@ -50,7 +50,7 @@ class ProductCategorySerializer(ModelSerializer):
     class Meta:
         model = ProductCategory
         fields = ('id', 'name',)
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'name')
 
 
 class ProductSerializer(ModelSerializer):
@@ -60,7 +60,7 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
 
 
 class ProductManageSerializer(ModelSerializer):
@@ -80,7 +80,7 @@ class ProductTopLeastSellersSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
 
 
 class ProductTopLeastProfitableSerializer(ModelSerializer):
@@ -91,7 +91,8 @@ class ProductTopLeastProfitableSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count',
+                            'total_profit')
 
 
 class ProductListItemSerializer(ModelSerializer):
@@ -100,7 +101,7 @@ class ProductListItemSerializer(ModelSerializer):
     class Meta:
         model = OrderProductListItem
         fields = ('id', 'product', 'quantity')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'product', 'quantity')
 
 
 class AddressSerializer(ModelSerializer):
@@ -112,7 +113,13 @@ class AddressSerializer(ModelSerializer):
         model = Address
         fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code', 'state',
                   'short_address', 'full_address')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code',
+                            'state', 'short_address', 'full_address')
+
+
+class OrderCreateAddressSerializer(AddressSerializer):
+    class Meta(AddressSerializer.Meta):
+        read_only_fields = ('id', 'short_address', 'full_address')
 
 
 class OrderSerializer(ModelSerializer):
@@ -124,7 +131,8 @@ class OrderSerializer(ModelSerializer):
         model = Order
         fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
                   'products_list')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
+                            'products_list',)
 
     def get_products_list(self, obj):
         return ProductListItemSerializer(obj.products_list, many=True).data
@@ -132,12 +140,12 @@ class OrderSerializer(ModelSerializer):
 
 class OrderCreateSerializer(ModelSerializer):
     client = serializers.PrimaryKeyRelatedField(queryset=get_user_model().objects.all())
-    order_address = AddressSerializer()
+    order_address = OrderCreateAddressSerializer()
     orderproductlistitem_set = ProductListItemSerializer(many=True)
 
     class Meta:
         model = Order
-        fields = ('client', 'order_address', 'orderproductlistitem_set')
+        fields = ('client', 'order_address', 'orderproductlistitem_set', 'products')
         read_only_fields = ('id',)
 
     def create(self, validated_data):
