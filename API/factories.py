@@ -109,7 +109,7 @@ class AddressFactory(DjangoModelFactory):
     class Meta:
         model = Address
 
-    country = factory.LazyFunction(lambda: random.choice(Address.Countries.choices)[0])
+    country = factory.LazyFunction(lambda: fake.country_code())
     city = factory.LazyFunction(lambda: fake.city())
     street = factory.LazyFunction(lambda: fake.street_name())
     street_number = factory.LazyFunction(lambda: fake.building_number())
@@ -126,7 +126,7 @@ class OrderFactory(DjangoModelFactory):
 
     client = factory.Iterator(Group.objects.get(name=settings.USER_CLIENT_GROUP_NAME).user_set.all())
     order_address = factory.Iterator(Address.objects.all())
-    is_paid = factory.LazyFunction(lambda: random.uniform(0, 1) > 0.3)
+    status = factory.LazyFunction(lambda: random.randint(0, len(Order.OrderStatus.choices)))
     order_date = factory.LazyFunction(
         lambda: fake.date_time_between(
             datetime.now() - timedelta(days=365),

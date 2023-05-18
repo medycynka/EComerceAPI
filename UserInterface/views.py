@@ -8,6 +8,7 @@ from django.conf import settings
 
 from API.models import ProductCategory
 from API.filters import ProductFilter
+from UserInterface.forms import AddressForm
 
 
 class RestrictAccessTemplateView(TemplateView):
@@ -114,6 +115,12 @@ class OrderCreateTemplateView(RestrictAccessTemplateView):
     template_name = 'order_create.html'
     allowed_users_groups = settings.USER_CLIENT_GROUP_NAME
     not_allowed_redirect = 'home'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['address_form'] = AddressForm()
+
+        return context
 
 
 class OrdersListTemplateView(TemplateView):

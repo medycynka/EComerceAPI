@@ -1,5 +1,5 @@
 {% extends 'basic.html' %}
-{% load static custom_project_templatetags %}
+{% load static custom_project_templatetags countries %}
 {% load static %}
 {% block styles_content %}
     <style>
@@ -166,13 +166,96 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-9">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-8">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Sales by country</h3>
                 </div>
                 <div class="card-body">
-                    <div id="world-map-sales" class="worldh h-300"></div>
+                    <div id="world-map-sales" class="worldh h-490"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Most profitable countries</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <div class="table-responsive">
+                        <table class="table border table-striped mg-b-0" id="topCountries">
+                            <thead>
+                                <tr>
+                                    <th>Lp</th>
+                                    <th>Country</th>
+                                    <th>Sales</th>
+                                    <th>Profits</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>5</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>6</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>7</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>8</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>9</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>10</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -450,7 +533,7 @@
             const ordersQuery = `
                 {
                   allOrders(dateFrom: "${moment().subtract(6, 'month').format('YYYY-MM-DD hh:mm:ss')}") {
-                    isPaid
+                    status
                   }
                 }
             `;
@@ -534,7 +617,7 @@
                 }
             });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
-                const paid = data.data.allOrders.filter(order => order.isPaid).length;
+                const paid = data.data.allOrders.filter(order => order.status > 1).length;
                 const unpaid = data.data.allOrders.length - paid;
                 const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
 
@@ -552,10 +635,19 @@
                     const salesAndProfits = {};
                     const countriesNormalized = {};
                     const countryData = data.data.countrySalesAndProfits;
+                    const topCountriesTableRows = document.querySelector('table#topCountries>tbody').children;
+                    const countryCodesFormatter = new Intl.DisplayNames(['en'], {type: 'region'});
+                    const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
                     for (let i = 0; i < countryData.length; i++) {
                         const countryCode = countryData[i].country !== 'en' ? countryData[i].country.toUpperCase() : 'GB';
                         salesAndProfits[countryCode] = {sales: countryData[i].sales, profits: countryData[i].profits};
                         countriesNormalized[countryCode] = countryData[i].profits;
+                        if (i < 10){
+                            const currentRowChildren = topCountriesTableRows[i].children;
+                            currentRowChildren[1].innerHTML = countryCodesFormatter.of(countryData[i].country);
+                            currentRowChildren[2].innerHTML = bigNumbersFormatter.format(countryData[i].sales) + ' PLN';
+                            currentRowChildren[3].innerHTML = bigNumbersFormatter.format(countryData[i].profits) + ' PLN';
+                        }
                     }
                     const countrySales = $('#world-map-sales').vectorMap({
                         map: 'world_mill_en',
@@ -585,7 +677,7 @@
                             const data = salesAndProfits[code];
                             const sales = formatter.format(data ? data.sales : 0);
                             const profits = formatter.format(data ? data.profits : 0);
-                            el.html(el.html() + ' Sales: ' + sales + ' Profits: ' + profits + ' PLN');
+                            el.html(el.html() + ' - Sales: ' + sales + ' Profits: ' + profits + ' PLN');
                         }
                     });
                 });

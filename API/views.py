@@ -6,7 +6,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.generics import CreateAPIView
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
@@ -105,26 +105,38 @@ class AddressModelViewSet(ModelViewSet):
         return [permission() for permission in permission_classes]
 
 
-class OrderListAPIView(ListAPIView):
-    serializer_class = OrderSerializer
-    queryset = Order.objects.all()
-
-    def get_queryset(self):
-        user = self.request.user
-
-        if user.is_authenticated:
-            if user.is_superuser:
-                return Order.objects.all().order_by("-pk")
-            if user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
-                return Order.objects.filter(orderproductlistitem__product__seller=user).order_by("-pk")
-            return Order.objects.filter(client=user).order_by("-pk")
-        return Order.objects.none()
-
-
-class OrderCreateAPIView(CreateAPIView):
+class OrderModelViewSet(ModelViewSet):
     serializer_class = OrderCreateSerializer
     queryset = Order.objects.all()
     permission_classes = [AuthenticatedClientsOnly]
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return OrderSerializer
+        return self.serializer_class
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        q = Order.objects.none()
+
+        if user.is_authenticated:
+            if user.is_superuser:
+                q = Order.objects.all().select_related('client').prefetch_related('orderproductlistitem_set')
+            elif user.groups.filter(name=settings.USER_SELLER_GROUP_NAME).exists():
+                q = Order.objects.filter(orderproductlistitem__product__seller=user)
+            else:
+                q = Order.objects.filter(client=user)
+
+            return q.select_related('client').prefetch_related('orderproductlistitem_set').order_by("-pk")
+
+        return q
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -167,6 +179,6 @@ class UserCreateAPIView(CreateAPIView):
         return Response({
             "username": instance.username,
             "email": instance.email,
-            "account_type": "Klient" if instance.groups.filter(name=settings.USER_CLIENT_GROUP_NAME).exists() else "Sprzedawca"
+            "account_type": "Client" if instance.groups.filter(name=settings.USER_CLIENT_GROUP_NAME).exists() else "Seller"
         }, status=status.HTTP_201_CREATED, headers=headers)
 

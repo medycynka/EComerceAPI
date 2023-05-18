@@ -12,6 +12,8 @@ from django.db.models.functions import ExtractMonth
 from django.db.models.functions import ExtractDay
 from django.db.models.functions import ExtractYear
 
+from django_countries.fields import CountryField
+
 from PIL import Image
 import os
 from io import BytesIO
@@ -177,13 +179,6 @@ class Product(models.Model):
 
 
 class Address(models.Model):
-    class Countries(models.TextChoices):
-        """
-        Represents available shipping countries
-        """
-        PL = 'pl', _('Polska')
-        EN = 'en', _('England')
-
     class PolishStates(models.IntegerChoices):
         """
         Polish voivodeship
@@ -206,7 +201,7 @@ class Address(models.Model):
         WP = 15, _('Wielkopolskie')
         ZP = 16, _('Zachodnio-pomorskie')
 
-    country = models.CharField(_("Country"), choices=Countries.choices, blank=True, default=Countries.PL, max_length=8)
+    country = CountryField(verbose_name=_("Country"))
     city = models.CharField(_("City"), max_length=128)
     street = models.CharField(_("Street"), max_length=128)
     street_number = models.CharField(_("Street number"), max_length=16)
@@ -224,7 +219,7 @@ class Address(models.Model):
         street_number_local = "/" + self.street_number_local if self.street_number_local else ""
         voivodeship = " woj. " + self.get_state_display() if self.state != Address.PolishStates.NONE else ""
         return f'{self.street} {self.street_number}{street_number_local}, {self.post_code} {self.city}, ' \
-               f'{self.get_country_display()}{voivodeship}'
+               f'{self.country.name}{voivodeship}'
 
     @property
     def short_address(self):
@@ -236,7 +231,7 @@ class Address(models.Model):
         return self.__str__()
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        if self.country != Address.Countries.PL and self.state != Address.PolishStates.NONE:
+        if self.country != "PL" and self.state != Address.PolishStates.NONE:
             self.state = Address.PolishStates.NONE
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
@@ -363,10 +358,88 @@ class OrderManager(models.Manager):
                 'order_address'
             ).annotate(country=F('order_address__country'))
 
-        return self.__annotate_sales_and_profits(q, 'country')
+        return self.__annotate_sales_and_profits(q, 'country').order_by('-profits')
 
 
 class Order(models.Model):
+    class OrderStatus(models.IntegerChoices):
+        """
+        Order status:
+            Pending: This means that the customer has begun the checkout process without making the necessary payments
+            for the products.
+
+            Pending Payment or Awaiting Payment: The customer may have initiated the payment process but is yet to
+            pay for the product.
+
+            Payment Received: This means that the customer has completed the payment for the order.
+
+            Order Confirmed: This means that the customer has completed the payment and the order has been received
+            and acknowledged by the e-commerce site.
+
+            Failed: This means that the customer could not complete the payment or other verifications required to
+            complete the order.
+
+            Expired: The customer could not make the payment for the products within the stipulated payment window.
+
+            Awaiting Fulfillment: This means that the customer has made the required payments for the price of the
+            products, and the products shall now be shipped.
+
+            Awaiting Shipment: This means that the products bought by the customer are now in a queue ready to be
+            shipped and are waiting to be collected by the shipment service provider.
+
+            On Hold: This means that the stock inventory is reduced by the number of products the customer has
+            requested. However, other steps need to be completed for order fulfillment.
+
+            Shipped: This means that the shipment provider has collected the products and the products are on their
+            way to the customer.
+
+            Partially Shipped: This means that only a part of the order or some products in the order are shipped.
+
+            Awaiting Pickup: This means that the products have been shipped to either the customer-specified location
+            or the business-specified location and are waiting to be picked up by the customer for delivery.
+
+            Completed: This means that the product has been shipped and delivered, and the payment for the same has
+            been made. The customer, at this point, can receive an invoice regarding the product they bought.
+
+            Canceled: This might mean a variety of things. Both the seller and the customer may cancel an order.
+            An order generally shows canceled if the customer fails to make the payment or if the seller has run out of
+            stock of a particular product. Whether or not the customer is entitled to a refund of their money, in this
+            case, depends on the stage of the order and other variables.
+
+            Declined: The seller declares that they cannot ship and fulfill the order.
+
+            Refunded: The seller agrees to refund the amount paid by the customer to buy the product.
+
+            Partially Refunded: The seller partially refunds the amount paid by the customer while buying the product.
+
+            Refund Rejected: The seller refuses to process the entire or partial refund of the amount paid by the
+            customer at the time of buying the products.
+
+            Disputed: The customer has raised an issue with the order fulfillment or the refund procedure. Generally,
+            customers raise disputes when e-commerce websites refuse to refund the amount paid by them.
+        """
+        PENDING = 0, _('Pending')
+        PENDING_PAYMENT = 1, _('Pending Payment')
+        PAYMENT_RECEIVED = 2, _('Payment Received')
+        ORDER_CONFIRMED = 3, _('Order Confirmed')
+        FAILED = 4, _('Failed')
+        EXPIRED = 5, _('Expired')
+        AWAITING_FULFILLMENT = 6, _('Awaiting Fulfillment')
+        AWAITING_SHIPMENT = 7, _('Awaiting Shipment')
+        ON_HOLD = 8, _('On Hold')
+        SHIPPED = 9, _('Shipped')
+        PARTIALLY_SHIPPED = 10, _('Partially Shipped')
+        AWAITING_PICKUP = 11, _('Awaiting Pickup')
+        COMPLETED = 12, _('Completed')
+        CANCELED = 13, _('Canceled')
+        DECLINED = 14, _('Declined')
+        REFUNDED = 15, _('Refunded')
+        PARTIALLY_REFUNDED = 16, _('Partially Refunded')
+        REFUND_REJECTED = 17, _('Refund Rejected')
+        DISPUTED = 18, _('Disputed')
+
+    UNPAID_STATUS = [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT]
+
     client = models.ForeignKey(User, verbose_name=_("Client"), null=True, on_delete=models.SET_NULL)
     order_address = models.ForeignKey('API.Address', verbose_name=_("Order address"), null=True, on_delete=models.SET_NULL)
     order_date = models.DateTimeField(verbose_name=_("Order date"), blank=True)
@@ -374,6 +447,8 @@ class Order(models.Model):
     full_price = models.DecimalField(verbose_name=_('Order summary price'), blank=True, null=True, decimal_places=2,
                                      max_digits=20)
     is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
+    status = models.PositiveSmallIntegerField(_("Order status"), choices=OrderStatus.choices, blank=True,
+                                              default=OrderStatus.PENDING)
 
     objects = OrderManager()
 
@@ -385,7 +460,6 @@ class Order(models.Model):
         """
         :return: :model:`Common.Product` list associated with this order
         """
-        Order.objects.filter(order_address__country='pl').select_related('order_address')
         return OrderProductListItem.objects.select_related('product', 'product__category').filter(
             order=self
         ).only('product', 'quantity')

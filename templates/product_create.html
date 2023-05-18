@@ -79,30 +79,32 @@
 {% endblock %}
 {% block custom_scripts %}
     <script>
-        $('select.form-select').select2({});
+        (function (){
+            $('select.form-select').select2({});
 
-        $( "form.needs-validation" ).on( "submit", function( event ) {
-            event.preventDefault();
-            event.stopPropagation();
+            $( "form.needs-validation" ).on( "submit", function( event ) {
+                event.preventDefault();
+                event.stopPropagation();
 
-            this.classList.add('was-validated');
+                this.classList.add('was-validated');
 
-            if (this.checkValidity()) {
-                $.ajax({
-                    url: "{% url 'api_product_create' %}",
-                    data: new FormData(this),
-                    type: 'POST',
-                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                    contentType : false,
-                    processData : false,
-                    success: (data, textStatus, jqXHR) => {
-                        window.location.href = "{% url 'products_list' %}"
-                    },
-                    error: (jqXHR, textStatus, errorThrown) => {
-                        console.log(jqXHR, textStatus, errorThrown);
-                    },
-                })
-            }
-        });
+                if (this.checkValidity()) {
+                    $.ajax({
+                        url: "{% url 'api_products-list' %}",
+                        data: new FormData(this),
+                        type: 'POST',
+                        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                        contentType : false,
+                        processData : false,
+                        success: (data, textStatus, jqXHR) => {
+                            window.location.href = "{% url 'products_list' %}"
+                        },
+                        error: (jqXHR, textStatus, errorThrown) => {
+                            console.log(jqXHR, textStatus, errorThrown);
+                        },
+                    })
+                }
+            });
+        })();
     </script>
 {% endblock %}

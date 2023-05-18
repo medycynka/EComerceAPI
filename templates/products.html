@@ -16,24 +16,26 @@
     {% csrf_token %}
 {% endblock %}
 {% block page_header_buttons %}
-    {% if request.user|is_seller or request.user.is_superuser %}
-        <div class="ms-auto pageheader-btn">
-            <a href="{% url 'product_create' %}" class="btn btn-primary btn-icon text-white me-2">
-                <span>
-                    <i class="fe fe-plus"></i>
-                </span> Add product
-            </a>
-        </div>
-    {% endif %}
-    {% if request.user|is_client or request.user.is_superuser %}
-        <div class="ms-auto pageheader-btn">
-            <a href="{% url 'order_create' %}" class="btn btn-secondary btn-icon text-white me-2">
-                <span>
-                    <i class="fe fe-shopping-cart"></i>
-                </span> Go to cart
-            </a>
-        </div>
-    {% endif %}
+    {% with request.user.is_superuser as user_is_admin %}
+        {% if request.user|is_seller or user_is_admin %}
+            <div class="ms-auto pageheader-btn">
+                <a href="{% url 'product_create' %}" class="btn btn-primary btn-icon text-white me-2">
+                    <span>
+                        <i class="fe fe-plus"></i>
+                    </span> Add product
+                </a>
+            </div>
+        {% endif %}
+        {% if request.user|is_client or user_is_admin %}
+            <div class="{% if not user_is_admin %}ms-auto {% endif %}pageheader-btn">
+                <a href="{% url 'order_create' %}" class="btn btn-secondary btn-icon text-white me-2">
+                    <span>
+                        <i class="fe fe-shopping-cart"></i>
+                    </span> Go to cart
+                </a>
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock %}
 {% block page_content %}
     <div class="row row-cards">
@@ -113,159 +115,161 @@
     <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
 
     <script>
-        const nextPageBtn = $('.page-next>.page-link');
-        const prevPageBtn = $('.page-prev>.page-link');
-        const productsContainer = $('#productsContainer');
-        const categorySelect = $('#select-category');
-        const orderSelect = $('#select-order');
-        const nameFilter = $('#nameFilter');
-        const descriptionFilter = $('#descriptionFilter');
-        const priceRangeFilter = $('.rangeslider3');
-        const canBuyProducts = '{{ request.user|is_client }}' === 'True';
-        const shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
-        const shoppingCartIds = new Set(shoppingCart.map((value, idx, arr) => value.id));
+        (function (){
+            const nextPageBtn = $('.page-next>.page-link');
+            const prevPageBtn = $('.page-prev>.page-link');
+            const productsContainer = $('#productsContainer');
+            const categorySelect = $('#select-category');
+            const orderSelect = $('#select-order');
+            const nameFilter = $('#nameFilter');
+            const descriptionFilter = $('#descriptionFilter');
+            const priceRangeFilter = $('.rangeslider3');
+            const canBuyProducts = '{{ request.user|is_client }}' === 'True';
+            const shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
+            const shoppingCartIds = new Set(shoppingCart.map((value, idx, arr) => value.id));
 
-        if (canBuyProducts) {
-            shoppingCart.length = 0;
-            shoppingCartIds.clear();
-            sessionStorage.removeItem('shopping-cart')
-        }
-
-        let addToShoppingCart = (name, price, productId) => {
-            if (canBuyProducts && !shoppingCartIds.has(productId)) {
-                shoppingCartIds.add(productId);
-                shoppingCart.push({
-                   'id': productId,
-                    'name': name,
-                    'price': price,
-                });
-                sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
-                Growl.growl({
-                    style: 'notice',
-                    title: 'Dodano do koszyka',
-                    duration: 1000,
-                    message: `Dodano ${name} do Twojego koszyka`,
-                });
+            if (canBuyProducts) {
+                shoppingCart.length = 0;
+                shoppingCartIds.clear();
+                sessionStorage.removeItem('shopping-cart')
             }
-        };
 
-        categorySelect.select2({});
-        orderSelect.select2({
-            minimumResultsForSearch: Infinity,
-        });
+            let addToShoppingCart = (name, price, productId) => {
+                if (canBuyProducts && !shoppingCartIds.has(productId)) {
+                    shoppingCartIds.add(productId);
+                    shoppingCart.push({
+                       'id': productId,
+                        'name': name,
+                        'price': price,
+                    });
+                    sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
+                    Growl.growl({
+                        style: 'notice',
+                        title: 'Dodano do koszyka',
+                        duration: 1000,
+                        message: `Dodano ${name} do Twojego koszyka`,
+                    });
+                }
+            };
 
-        priceRangeFilter.ionRangeSlider({
-            type: 'double',
-            grid: true,
-            min: 0,
-            max: 10000,
-            from: 0,
-            to: 10000,
-            postfix: ' PLN'
-        });
+            categorySelect.select2({});
+            orderSelect.select2({
+                minimumResultsForSearch: Infinity,
+            });
 
-        function getAllFiltersData() {
-            const priceRange = priceRangeFilter[0].value.split(';');
+            priceRangeFilter.ionRangeSlider({
+                type: 'double',
+                grid: true,
+                min: 0,
+                max: 10000,
+                from: 0,
+                to: 10000,
+                postfix: ' PLN'
+            });
 
-            return {
-                'category': categorySelect[0].value,
-                'order': orderSelect[0].value,
-                'name': nameFilter[0].value,
-                'description': descriptionFilter[0].value,
-                'price_range_min': priceRange[0],
-                'price_range_max': priceRange[1],
+            function getAllFiltersData() {
+                const priceRange = priceRangeFilter[0].value.split(';');
+
+                return {
+                    'category': categorySelect[0].value,
+                    'order': orderSelect[0].value,
+                    'name': nameFilter[0].value,
+                    'description': descriptionFilter[0].value,
+                    'price_range_min': priceRange[0],
+                    'price_range_max': priceRange[1],
+                }
             }
-        }
 
-        function filterProducts(){
-            const filterData = getAllFiltersData();
-            reloadProductsList(null, filterData);
+            function filterProducts(){
+                const filterData = getAllFiltersData();
+                reloadProductsList(null, filterData);
 
-            return false
-        }
+                return false
+            }
 
-        function generateProductsList(products) {
-            const itemsCount = products.length;
-            const currentUrl = window.location.href;
-            productsContainer.empty();
+            function generateProductsList(products) {
+                const itemsCount = products.length;
+                const currentUrl = window.location.href;
+                productsContainer.empty();
 
-            for (let i = 0; i < itemsCount; i++) {
-                productsContainer.append($(`
-                    <div class="col-md-6 col-sm-6 col-xl-6">
-                        <div class="card item-card">
-                            <div class="product-grid6  card-body">
-                                <div class="product-image6">
-                                    <a href="${currentUrl + products[i].id}/">
-                                        <img class="img-fluid w-100" src="${products[i].thumbnail}" alt="img">
-                                    </a>
-                                </div>
-                                <div class="product-content text-center">
-                                    <div class="text-center mb-2 text-warning">
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star-half-o"></i>
+                for (let i = 0; i < itemsCount; i++) {
+                    productsContainer.append($(`
+                        <div class="col-md-6 col-sm-6 col-xl-6">
+                            <div class="card item-card">
+                                <div class="product-grid6  card-body">
+                                    <div class="product-image6">
+                                        <a href="${currentUrl + products[i].id}/">
+                                            <img class="img-fluid w-100" src="${products[i].thumbnail}" alt="img">
+                                        </a>
                                     </div>
-                                    <h4 class="title"><a href="javascript:void(0);">${products[i].name}</a></h4>
-                                    <h6 style="min-height: 30px;">${products[i].category.name}</h6>
-                                    <div class="price">${products[i].price} PLN</div>
+                                    <div class="product-content text-center">
+                                        <div class="text-center mb-2 text-warning">
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star"></i>
+                                            <i class="fa fa-star-half-o"></i>
+                                        </div>
+                                        <h4 class="title"><a href="javascript:void(0);">${products[i].name}</a></h4>
+                                        <h6 style="min-height: 30px;">${products[i].category.name}</h6>
+                                        <div class="price">${products[i].price} PLN</div>
+                                    </div>
+                                    <ul class="icons">
+                                        <li><a href="${currentUrl + products[i].id}/" data-tip="Quick View"><i class="fe fe-eye "></i></a></li>
+                                        <li><a href="javascript:void(0)" onclick="addToShoppingCart('${products[i].name}', '${products[i].price}', '${products[i].id}')" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
+                                    </ul>
                                 </div>
-                                <ul class="icons">
-                                    <li><a href="${currentUrl + products[i].id}/" data-tip="Quick View"><i class="fe fe-eye "></i></a></li>
-                                    <li><a href="javascript:void(0)" onclick="addToShoppingCart('${products[i].name}', '${products[i].price}', '${products[i].id}')" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
-                                </ul>
                             </div>
                         </div>
-                    </div>
-                `))
+                    `))
+                }
             }
-        }
 
-        function reloadProductsList(apiUrl, filters) {
-            $.ajax({
-                url: apiUrl || "{% url 'api_products_list' %}",
-                data: filters,
-                type: 'GET',
-                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                contentType : 'application/json',
-                processData : true,
-                success: (data, textStatus, jqXHR) => {
-                    if (data.previous) {
-                        prevPageBtn.parent().removeClass('disabled');
-                        prevPageBtn.attr('data-prev-page', data.previous);
-                        prevPageBtn.on('click', function () {
-                            reloadProductsList(this.dataset['prevPage'], null);
-                            $("html").animate({
-                                scrollTop: 0
-                            }, 0);
-                        });
-                    } else {
-                        !prevPageBtn.parent().hasClass('disabled') && prevPageBtn.parent().addClass('disabled');
-                        prevPageBtn.off('click');
-                    }
-                    if (data.next) {
-                        nextPageBtn.parent().removeClass('disabled');
-                        nextPageBtn.attr('data-next-page', data.next);
-                        nextPageBtn.on('click', function () {
-                            reloadProductsList(this.dataset['nextPage'], null);
-                            $("html").animate({
-                                scrollTop: 0
-                            }, 0);
-                        });
-                    } else {
-                        !nextPageBtn.parent().hasClass('disabled') && nextPageBtn.parent().addClass('disabled');
-                        nextPageBtn.off('click');
-                    }
+            function reloadProductsList(apiUrl, filters) {
+                $.ajax({
+                    url: apiUrl || "{% url 'api_products-list' %}",
+                    data: filters,
+                    type: 'GET',
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : 'application/json',
+                    processData : true,
+                    success: (data, textStatus, jqXHR) => {
+                        if (data.previous) {
+                            prevPageBtn.parent().removeClass('disabled');
+                            prevPageBtn.attr('data-prev-page', data.previous);
+                            prevPageBtn.on('click', function () {
+                                reloadProductsList(this.dataset['prevPage'], null);
+                                $("html").animate({
+                                    scrollTop: 0
+                                }, 0);
+                            });
+                        } else {
+                            !prevPageBtn.parent().hasClass('disabled') && prevPageBtn.parent().addClass('disabled');
+                            prevPageBtn.off('click');
+                        }
+                        if (data.next) {
+                            nextPageBtn.parent().removeClass('disabled');
+                            nextPageBtn.attr('data-next-page', data.next);
+                            nextPageBtn.on('click', function () {
+                                reloadProductsList(this.dataset['nextPage'], null);
+                                $("html").animate({
+                                    scrollTop: 0
+                                }, 0);
+                            });
+                        } else {
+                            !nextPageBtn.parent().hasClass('disabled') && nextPageBtn.parent().addClass('disabled');
+                            nextPageBtn.off('click');
+                        }
 
-                    generateProductsList(data.results);
-                },
-                error: (jqXHR, textStatus, errorThrown) => {
-                    console.log(jqXHR, textStatus, errorThrown);
-                },
-            })
-        }
+                        generateProductsList(data.results);
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        console.log(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            }
 
-        reloadProductsList(null, null);
+            reloadProductsList(null, null);
+        })();
     </script>
 {% endblock %}
