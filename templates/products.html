@@ -68,7 +68,7 @@
                                 <label class="form-label">Price</label>
                                 <input class="rangeslider3" data-extra-classes="irs-outline" name="product_price" type="text" value="">
                             </div>
-                            <a class="btn btn-primary mt-1" href="javascript:void(0);" onclick="filterProducts()">Apply filters</a>
+                            <a class="btn btn-primary mt-1 filter-products" href="javascript:void(0);">Apply filters</a>
                         </div>
                     </div>
                 </div>
@@ -80,20 +80,18 @@
                     <div class="col-sm-6 p-2">
                         <div class="input-group">
                             <input type="text" id="nameFilter" class="form-control" placeholder="Search by name ...">
-                            <button  class="input-group-text btn btn-primary" onclick="filterProducts()">Search by name</button>
+                            <button class="input-group-text btn btn-primary filter-products">Search by name</button>
                         </div>
                     </div>
                     <div class="col-sm-6 p-2">
                         <div class="input-group">
                             <input type="text" id="descriptionFilter" class="form-control" placeholder="Search by description ...">
-                            <button  class="input-group-text btn btn-primary" onclick="filterProducts()">Search by description</button>
+                            <button class="input-group-text btn btn-primary filter-products">Search by description</button>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="row" id="productsContainer">
-
-            </div>
+            <div class="row" id="productsContainer"></div>
             <div class="mb-5">
                 <div class="float-end">
                     <ul class="pagination ">
@@ -124,7 +122,7 @@
             const nameFilter = $('#nameFilter');
             const descriptionFilter = $('#descriptionFilter');
             const priceRangeFilter = $('.rangeslider3');
-            const canBuyProducts = '{{ request.user|is_client }}' === 'True';
+            const canBuyProducts = '{% if request.user|is_client or request.user.is_superuser %}true{% else %}false{% endif %}' === 'true';
             const shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
             const shoppingCartIds = new Set(shoppingCart.map((value, idx, arr) => value.id));
 
@@ -156,7 +154,6 @@
             orderSelect.select2({
                 minimumResultsForSearch: Infinity,
             });
-
             priceRangeFilter.ionRangeSlider({
                 type: 'double',
                 grid: true,
@@ -216,13 +213,19 @@
                                     </div>
                                     <ul class="icons">
                                         <li><a href="${currentUrl + products[i].id}/" data-tip="Quick View"><i class="fe fe-eye "></i></a></li>
-                                        <li><a href="javascript:void(0)" onclick="addToShoppingCart('${products[i].name}', '${products[i].price}', '${products[i].id}')" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
+                                        <li><a href="javascript:void(0)" id="shoppingCartAdder" data-product-cart-data="${products[i].name};${products[i].price};${products[i].id}" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
                     `))
                 }
+
+                document.querySelectorAll('a#shoppingCartAdder').forEach((el) => {
+                    el.addEventListener('click', function () {
+                        addToShoppingCart(...this.dataset['productCartData'].split(';'));
+                    })
+                })
             }
 
             function reloadProductsList(apiUrl, filters) {
@@ -268,6 +271,10 @@
                     },
                 })
             }
+
+            document.querySelectorAll('.filter-products').forEach((el) => {
+                el.addEventListener('click', filterProducts);
+            });
 
             reloadProductsList(null, null);
         })();

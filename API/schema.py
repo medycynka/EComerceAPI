@@ -6,6 +6,7 @@ from graphene_django.debug import DjangoDebug
 from API.models import ProductCategory
 from API.models import Product
 from API.models import Order
+from API.models import DiscountCoupon
 from API.types import ProductCategoryType
 from API.types import ProductType
 from API.types import ProductStatisticType
@@ -13,6 +14,7 @@ from API.types import OrderType
 from API.types import SalesAndProfitsType
 from API.types import MonthlySalesAndProfitsType
 from API.types import CountrySalesAndProfitsType
+from API.types import DiscountCouponType
 
 
 def get_date_range_product_filter_from_kwargs(**kwargs):
@@ -72,6 +74,10 @@ class APIQuery(graphene.ObjectType):
                                              )
     monthly_sales_and_profits = graphene.List(MonthlySalesAndProfitsType, year=graphene.Int(required=False))
     country_sales_and_profits = graphene.List(CountrySalesAndProfitsType)
+    all_coupons = graphene.List(DiscountCouponType,
+                                expired=graphene.Boolean(required=False),
+                                used=graphene.Boolean(required=False)
+                                )
 
     def resolve_all_categories(self, info):
         return ProductCategory.objects.all()
@@ -153,6 +159,19 @@ class APIQuery(graphene.ObjectType):
 
     def resolve_country_sales_and_profits(self, info, **kwargs):
         return Order.objects.sales_by_countries(info.context.user)
+
+    def resolve_all_coupons(self, info, **kwargs):
+        filter_q = Q()
+        expired = kwargs.get('expired', None)
+        used = kwargs.get('used', None)
+
+        if expired is not None:
+            filter_q.add(Q(is_expired=expired), Q.AND)
+        if used is not None:
+            filter_q.add(Q(is_used=used), Q.AND)
+        if filter_q:
+            return DiscountCoupon.objects.filter(filter_q)
+        return DiscountCoupon.objects.all()
 
 
 schema = graphene.Schema(query=APIQuery)

@@ -1,6 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import CreateAPIView
@@ -10,12 +11,14 @@ from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
 
 from API.api_permissions import AuthenticatedClientsOnly
 from API.api_permissions import AuthenticatedSellersOnly
 from API.models import Product
 from API.models import Order
 from API.models import Address
+from API.models import DiscountCoupon
 from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
 from API.serializers import ProductTopLeastSellersSerializer
@@ -24,6 +27,8 @@ from API.serializers import AddressSerializer
 from API.serializers import OrderSerializer
 from API.serializers import OrderCreateSerializer
 from API.serializers import UserCreateSerializer
+from API.serializers import DiscountCouponSerializer
+from API.serializers import DiscountCouponCodesSerializer
 from API.filters import ProductFilter
 from API.filters import ProductTopSellersFilter
 from API.filters import ProductLeastSellersFilter
@@ -162,6 +167,8 @@ class OrderModelViewSet(ModelViewSet):
             "payment_date": payment_deadline
         }, status=status.HTTP_201_CREATED, headers=headers)
 
+    # add custom detail methods like 'pay_for_order', 'send_order', etc.
+
 
 class UserCreateAPIView(CreateAPIView):
     serializer_class = UserCreateSerializer
@@ -182,3 +189,44 @@ class UserCreateAPIView(CreateAPIView):
             "account_type": "Client" if instance.groups.filter(name=settings.USER_CLIENT_GROUP_NAME).exists() else "Seller"
         }, status=status.HTTP_201_CREATED, headers=headers)
 
+
+class DiscountCouponModelViewSet(ModelViewSet):
+    serializer_class = DiscountCouponSerializer
+    queryset = DiscountCoupon.objects.all()
+    permission_classes = [AuthenticatedClientsOnly]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            return DiscountCoupon.objects.all()
+
+        return DiscountCoupon.objects.none()
+
+    @action(methods=['post'], detail=False, url_path='check-if-valid', url_name='api_coupons_validation_check')
+    def check_if_valid(self, request):
+        codes_serializer = DiscountCouponCodesSerializer(data=request.data)
+
+        if codes_serializer.is_valid():
+            codes = codes_serializer.validated_data['codes']
+            validation = {c: {"valid": False, "discount": 0.0} for c in codes}
+            current_time = timezone.now()
+            coupons = DiscountCoupon.objects.filter(
+                code__in=codes, is_used=False, is_expired=False, valid_date__gt=current_time
+            )
+            if coupons.exists():
+                for coupon in coupons:
+                    validation[coupon.code]["valid"] = True
+                    validation[coupon.code]["discount"] = coupon.discount
+
+            return Response(validation, status=status.HTTP_200_OK)
+
+        return Response(
+            {'status': 'Empty data received! Provide at least one coupon code to check'},
+            status=status.HTTP_400_BAD_REQUEST
+        )

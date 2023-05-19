@@ -12,6 +12,7 @@ from API.models import Product
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
+from API.models import DiscountCoupon
 
 
 class UserSerializer(ModelSerializer):
@@ -129,10 +130,10 @@ class OrderSerializer(ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
-                  'products_list')
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount',
+                  'final_price', 'products_list')
         read_only_fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
-                            'products_list',)
+                            'discount', 'final_price', 'products_list',)
 
     def get_products_list(self, obj):
         return ProductListItemSerializer(obj.products_list, many=True).data
@@ -145,7 +146,7 @@ class OrderCreateSerializer(ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('client', 'order_address', 'orderproductlistitem_set', 'products')
+        fields = ('client', 'order_address', 'orderproductlistitem_set', 'discount',)
         read_only_fields = ('id',)
 
     def create(self, validated_data):
@@ -161,6 +162,17 @@ class OrderCreateSerializer(ModelSerializer):
         ]
 
         OrderProductListItem.objects.bulk_create(products_list)
-        instance.save()
+        instance.save(update_full_price=True)
 
         return instance
+
+
+class DiscountCouponSerializer(ModelSerializer):
+    class Meta:
+        model = DiscountCoupon
+        fields = ('id', 'code', 'is_used', 'is_expired', 'valid_time', 'valid_date', 'discount')
+        read_only_fields = ('id', 'is_expired', 'valid_date')
+
+
+class DiscountCouponCodesSerializer(serializers.Serializer):
+    codes = serializers.ListField(child=serializers.CharField(), allow_empty=False, allow_null=False, min_length=1)

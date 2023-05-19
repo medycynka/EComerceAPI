@@ -10,6 +10,7 @@ api_router = DefaultRouter()
 api_router.register(r'products', views.ProductModelViewSet, basename='api_products')
 api_router.register(r'address', views.AddressModelViewSet, basename='api_address')
 api_router.register(r'orders', views.OrderModelViewSet, basename='api_orders')
+api_router.register(r'coupons', views.DiscountCouponModelViewSet, basename='api_coupons')
 
 urlpatterns = [
     # API

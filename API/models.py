@@ -18,6 +18,7 @@ from PIL import Image
 import os
 from io import BytesIO
 from datetime import timedelta, datetime
+from decimal import Decimal
 
 # Create your models here.
 
@@ -449,6 +450,8 @@ class Order(models.Model):
     is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
     status = models.PositiveSmallIntegerField(_("Order status"), choices=OrderStatus.choices, blank=True,
                                               default=OrderStatus.PENDING)
+    discount = models.DecimalField(verbose_name=_('Order discount'), blank=True, null=True, decimal_places=2,
+                                   max_digits=3, default=0.0)
 
     objects = OrderManager()
 
@@ -456,7 +459,7 @@ class Order(models.Model):
         db_table = "API_order"
 
     @property
-    def products_list(self):
+    def products_list(self) -> QuerySet:
         """
         :return: :model:`Common.Product` list associated with this order
         """
@@ -464,12 +467,26 @@ class Order(models.Model):
             order=self
         ).only('product', 'quantity')
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+    @property
+    def has_discount(self) -> bool:
+        """
+        :return: check if this order has discount
+        """
+        return self.discount > Decimal(0.0)
+
+    @property
+    def final_price(self) -> Decimal:
+        """
+        :return: final order price with discount included ex. for 20% discount final price would be 80% of total price
+        """
+        return self.full_price * (Decimal(1.0) - self.discount) if self.has_discount else self.full_price
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None, update_full_price=False):
         if not self.order_date:
             self.order_date = timezone.now()
         if not self.payment_deadline:
             self.payment_deadline = self.order_date + timedelta(days=settings.PAYMENT_DEADLINE_DAYS)
-        if not self.full_price and self.products_list.exists():
+        if update_full_price and not self.full_price and self.products_list.exists():
             self.full_price = self.products_list.aggregate(
                 full_price=models.Sum(F('product__price') * F('quantity'), output_field=models.DecimalField())
             )['full_price']
@@ -489,3 +506,35 @@ class OrderProductListItem(models.Model):
 
     class Meta:
         db_table = "API_order_product_list_item"
+
+
+class DiscountCoupon(models.Model):
+    class ValidTime(models.IntegerChoices):
+        """
+        How long this coupon is valid, ex 7 days
+        """
+        ONE_DAY = 1, _('One day')
+        THREE_DAYS = 3, _('Three days')
+        ONE_WEEK = 7, _('One week')
+        TWO_WEEKS = 14, _('Two weeks')
+        ONE_MONTH = 30, _('One month')
+        THREE_MONTHS = 91, _('Three months')
+        ONE_YEAR = 365, _('Ono year')
+
+    code = models.CharField(verbose_name=_("Coupon code"), max_length=32)
+    is_used = models.BooleanField(verbose_name=_('Id coupon used?'), blank=True, default=False)
+    is_expired = models.BooleanField(verbose_name=_('Id coupon expired?'), blank=True, default=False)
+    valid_time = models.PositiveSmallIntegerField(_("Valid time"), choices=ValidTime.choices, blank=True,
+                                                  default=ValidTime.ONE_DAY)
+    valid_date = models.DateTimeField(verbose_name=_('Payment deadline'), blank=True)
+    discount = models.DecimalField(verbose_name=_('Discount'), blank=True, null=True, decimal_places=2,
+                                   max_digits=3, default=0.0)
+
+    class Meta:
+        db_table = "API_discount_coupon"
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None, update_full_price=False):
+        if not self.valid_date:
+            self.valid_date = timezone.now() + timedelta(days=self.valid_time)
+
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)

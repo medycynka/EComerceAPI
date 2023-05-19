@@ -18,6 +18,7 @@ class Command(BaseCommand):
         parser.add_argument('-p', '--products', action='store_true', default=False, help="Create Product models")
         parser.add_argument('-a', '--addresses', action='store_true', default=False, help="Create Address models")
         parser.add_argument('-o', '--orders', action='store_true', default=False, help="Create Order models")
+        parser.add_argument('-cd', '--coupons', action='store_true', default=False, help="Create DiscountCoupon models")
 
     def handle(self, *args, **options):
         batch_size = int(options['batch_size'][0])
@@ -53,6 +54,12 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Generating {batch_size} test orders...'))
             factories.OrderFactory.create_batch(batch_size)
             self.stdout.write(self.style.SUCCESS(f'Successfully created {batch_size} test orders.'))
+            created_anything = True
+
+        if options['coupons']:
+            self.stdout.write(self.style.SUCCESS(f'Generating {batch_size} test discount coupons...'))
+            factories.DiscountCouponFactory.create_batch(batch_size)
+            self.stdout.write(self.style.SUCCESS(f'Successfully created {batch_size} test coupons.'))
             created_anything = True
 
         if created_anything:
