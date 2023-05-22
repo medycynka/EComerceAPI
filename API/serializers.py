@@ -19,7 +19,7 @@ class UserSerializer(ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('id', 'username', 'email')
-        read_only_fields = ('id', 'username', 'email')
+        read_only_fields = fields
 
 
 class UserCreateSerializer(ModelSerializer):
@@ -50,8 +50,8 @@ class UserCreateSerializer(ModelSerializer):
 class ProductCategorySerializer(ModelSerializer):
     class Meta:
         model = ProductCategory
-        fields = ('id', 'name',)
-        read_only_fields = ('id', 'name')
+        fields = ('id', 'name')
+        read_only_fields = fields
 
 
 class ProductSerializer(ModelSerializer):
@@ -61,7 +61,7 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        read_only_fields = fields
 
 
 class ProductManageSerializer(ModelSerializer):
@@ -81,7 +81,7 @@ class ProductTopLeastSellersSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
+        read_only_fields = fields
 
 
 class ProductTopLeastProfitableSerializer(ModelSerializer):
@@ -92,8 +92,7 @@ class ProductTopLeastProfitableSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count',
-                            'total_profit')
+        read_only_fields = fields
 
 
 class ProductListItemSerializer(ModelSerializer):
@@ -102,7 +101,7 @@ class ProductListItemSerializer(ModelSerializer):
     class Meta:
         model = OrderProductListItem
         fields = ('id', 'product', 'quantity')
-        read_only_fields = ('id', 'product', 'quantity',)
+        read_only_fields = fields
 
 
 class ProductListItemCreateSerializer(ProductListItemSerializer):
@@ -119,8 +118,7 @@ class AddressSerializer(ModelSerializer):
         model = Address
         fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code', 'state',
                   'short_address', 'full_address')
-        read_only_fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code',
-                            'state', 'short_address', 'full_address')
+        read_only_fields = fields
 
 
 class OrderCreateAddressSerializer(AddressSerializer):
@@ -137,8 +135,7 @@ class OrderSerializer(ModelSerializer):
         model = Order
         fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount',
                   'final_price', 'products_list')
-        read_only_fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
-                            'discount', 'final_price', 'products_list',)
+        read_only_fields = fields
 
     def get_products_list(self, obj):
         return ProductListItemSerializer(obj.products_list, many=True).data
