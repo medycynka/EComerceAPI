@@ -102,7 +102,12 @@ class ProductListItemSerializer(ModelSerializer):
     class Meta:
         model = OrderProductListItem
         fields = ('id', 'product', 'quantity')
-        read_only_fields = ('id', 'product', 'quantity')
+        read_only_fields = ('id', 'product', 'quantity',)
+
+
+class ProductListItemCreateSerializer(ProductListItemSerializer):
+    class Meta(ProductListItemSerializer.Meta):
+        read_only_fields = ('id',)
 
 
 class AddressSerializer(ModelSerializer):
@@ -142,7 +147,7 @@ class OrderSerializer(ModelSerializer):
 class OrderCreateSerializer(ModelSerializer):
     client = serializers.PrimaryKeyRelatedField(queryset=get_user_model().objects.all())
     order_address = OrderCreateAddressSerializer()
-    orderproductlistitem_set = ProductListItemSerializer(many=True)
+    orderproductlistitem_set = ProductListItemCreateSerializer(many=True)
 
     class Meta:
         model = Order
@@ -152,6 +157,16 @@ class OrderCreateSerializer(ModelSerializer):
     def create(self, validated_data):
         order_products = validated_data.pop('orderproductlistitem_set')
         address_data = validated_data.pop('order_address')
+        discount = validated_data.pop('discount_id', None)
+
+        if discount is not None:
+            discount = DiscountCoupon.objects.get(pk=discount)
+            discount.is_used = True
+            discount.save()
+            validated_data['discount'] = discount.discount
+        else:
+            validated_data['discount'] = 0.0
+
         order_address = Address.objects.create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)

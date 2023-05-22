@@ -533,7 +533,7 @@ class DiscountCoupon(models.Model):
     class Meta:
         db_table = "API_discount_coupon"
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None, update_full_price=False):
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         if not self.valid_date:
             self.valid_date = timezone.now() + timedelta(days=self.valid_time)
 

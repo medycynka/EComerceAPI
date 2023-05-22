@@ -93,6 +93,16 @@
                             </div>
                         </div>
                         <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.state|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.street|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group col-md-6 mb-0">
                                 {{ address_form.street_number|as_crispy_field }}
                             </div>
@@ -101,21 +111,11 @@
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group col-md-12 mb-0">
-                                {{ address_form.state|as_crispy_field }}
-                            </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group col-md-4 mb-0">
                                 {{ address_form.post_code|as_crispy_field }}
                             </div>
                             <div class="form-group col-md-8 mb-0">
                                 {{ address_form.city|as_crispy_field }}
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-12 mb-0">
-                                {{ address_form.street|as_crispy_field }}
                             </div>
                         </div>
                     </form>
@@ -134,7 +134,7 @@
                             </tr>
                             <tr>
                                 <td class="border-top-0">Discount</td>
-                                <td class="text-end fw-bold border-top-0">0%</td>
+                                <td class="text-end fw-bold border-top-0" id="discountValue">0%</td>
                             </tr>
                             <tr>
                                 <td class="border-top-0">Shipping</td>
@@ -150,7 +150,7 @@
                 <div class="card-footer">
                     <div class="btn-list text-end">
                         <a href="{% url 'products_list' %}" class="btn btn-primary"><i class="fa fa-arrow-left me-1"></i>Continue Shopping</a>
-                        <a href="javascript:void(0)" class="btn btn-success" id="createOrderBtn" onclick="createOrder()">Order<i class="fa fa-arrow-right ms-1"></i></a>
+                        <a href="javascript:void(0)" class="btn btn-success" id="createOrderBtn">Order<i class="fa fa-arrow-right ms-1"></i></a>
                     </div>
                 </div>
             </div>
@@ -165,9 +165,11 @@
             const stateSelectRow = $('select#id_state').closest('.form-row');
             const listContainer = $('.table-responsive>.table>tbody');
             let shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
+            let currentDiscount = null;
             const updateFullPrice = () => {
                 const prices = document.querySelectorAll('td#singletonPrice');
                 const quantities = document.querySelectorAll('input.qty');
+                const discount = document.getElementById('discountValue');
                 let fullProductsPrice = 0;
 
                 for (let i = 0; i < prices.length; i++) {
@@ -175,13 +177,14 @@
                 }
 
                 fullPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
-                fullEndPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
+                fullEndPrice.innerHTML = `${(fullProductsPrice * (1 - Number(discount.innerHTML.replace('%', '')) / 100)).toFixed(2)} PLN`;
             };
             const orderDataSerializer = () => {
                 const data = {
                     "client": "{{ request.user.id }}",
                     "order_address": {},
                     "discount": 0.0,
+                    "discount_id": currentDiscount,
                     "orderproductlistitem_set": [],
                 };
                 $("form#clientDataForm").serializeArray().map(field => {
@@ -215,6 +218,7 @@
             });
             document.querySelector('a#createOrderBtn').addEventListener('click', function () {
                 const orderData = orderDataSerializer();
+                console.log(orderData);
                 const clientDataForm = document.querySelector('form#clientDataForm');
 
                 clientDataForm.classList.add('was-validated');
@@ -336,6 +340,9 @@
 
                 return false
             });
+            $('input#couponDiscountChecker').on('input', function () {
+                if (!this.value?.length) currentDiscount =  null;
+            });
             $('button.coupon-checker').on('click', function () {
                 const couponInput = document.getElementById('couponDiscountChecker');
                 const couponCode = couponInput.value;
@@ -347,13 +354,20 @@
                         headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
                         contentType : 'application/json',
                         success: (data, textStatus, jqXHR) => {
+                            const discountValue = document.getElementById('discountValue');
+
                             if (data[couponCode].valid) {
                                 couponInput.classList.remove('is-invalid');
                                 couponInput.classList.add('is-valid');
+                                discountValue.innerHTML = `${(Number(data[couponCode].discount) * 100).toFixed(0)}%`;
+                                currentDiscount = data[couponCode].id;
                             } else {
                                 couponInput.classList.remove('is-valid');
                                 couponInput.classList.add('is-invalid');
+                                discountValue.innerHTML = "0%";
                             }
+
+                            updateFullPrice();
                         },
                         error: (jqXHR, textStatus, errorThrown) => {
                             console.log(jqXHR, textStatus, errorThrown);
@@ -361,6 +375,8 @@
                     });
                 }
             });
+
+            updateFullPrice();
         })();
     </script>
 {% endblock %}

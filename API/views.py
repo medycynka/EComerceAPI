@@ -154,7 +154,7 @@ class OrderModelViewSet(ModelViewSet):
         send_mail(
             "Your order has been created",
             f"Thank you for shopping in our shop. \n"
-            f"Make payment for your order ({instance.full_price} PLN) by {payment_deadline}.",
+            f"Make payment for your order ({instance.final_price} PLN) by {payment_deadline}.",
             settings.DEFAULT_EMAIL_ADDRESS,
             [client_email if client_email else "user.email@example.com"],
             fail_silently=True,
@@ -163,7 +163,7 @@ class OrderModelViewSet(ModelViewSet):
         headers = self.get_success_headers(serializer.data)
 
         return Response({
-            "total_product_price": instance.full_price,
+            "total_product_price": instance.final_price,
             "payment_date": payment_deadline
         }, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -223,6 +223,7 @@ class DiscountCouponModelViewSet(ModelViewSet):
                 for coupon in coupons:
                     validation[coupon.code]["valid"] = True
                     validation[coupon.code]["discount"] = coupon.discount
+                    validation[coupon.code]["id"] = coupon.pk
 
             return Response(validation, status=status.HTTP_200_OK)
 
