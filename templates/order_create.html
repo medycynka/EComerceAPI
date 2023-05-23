@@ -349,7 +349,7 @@
                 if (couponCode && couponCode !== ''){
                     $.ajax({
                         url: "{% url 'api_coupons-api_coupons_validation_check' %}",
-                        data: JSON.stringify({"codes": [couponCode]}),
+                        data: JSON.stringify({"codes": [couponCode], "flat": false}),
                         type: 'POST',
                         headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
                         contentType : 'application/json',
@@ -361,7 +361,9 @@
                                 couponInput.classList.add('is-valid');
                                 discountValue.innerHTML = `${(Number(data[couponCode].discount) * 100).toFixed(0)}%`;
                                 currentDiscount = data[couponCode].id;
+                                couponInput.nextElementSibling.nextElementSibling.innerHTML = "Invalid coupon code!";
                             } else {
+                                couponInput.nextElementSibling.nextElementSibling.innerHTML = data[couponCode]["invalid_reason"];
                                 couponInput.classList.remove('is-valid');
                                 couponInput.classList.add('is-invalid');
                                 discountValue.innerHTML = "0%";

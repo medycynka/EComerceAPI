@@ -439,7 +439,7 @@ class Order(models.Model):
         REFUND_REJECTED = 17, _('Refund Rejected')
         DISPUTED = 18, _('Disputed')
 
-    UNPAID_STATUS = [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT]
+    UNPAID_STATUS = [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT, OrderStatus.EXPIRED]
 
     client = models.ForeignKey(User, verbose_name=_("Client"), null=True, on_delete=models.SET_NULL)
     order_address = models.ForeignKey('API.Address', verbose_name=_("Order address"), null=True, on_delete=models.SET_NULL)
@@ -447,7 +447,7 @@ class Order(models.Model):
     payment_deadline = models.DateTimeField(verbose_name=_('Payment deadline'), blank=True)
     full_price = models.DecimalField(verbose_name=_('Order summary price'), blank=True, null=True, decimal_places=2,
                                      max_digits=20)
-    is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
+    is_paid = models.BooleanField(verbose_name=_('Is order paid?'), blank=True, default=False)
     status = models.PositiveSmallIntegerField(_("Order status"), choices=OrderStatus.choices, blank=True,
                                               default=OrderStatus.PENDING)
     discount = models.DecimalField(verbose_name=_('Order discount'), blank=True, null=True, decimal_places=2,

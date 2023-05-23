@@ -15,6 +15,7 @@ from API.models import OrderProductListItem
 from API.models import DiscountCoupon
 
 
+# region Models Serializers
 class UserSerializer(ModelSerializer):
     class Meta:
         model = get_user_model()
@@ -110,7 +111,7 @@ class ProductListItemCreateSerializer(ProductListItemSerializer):
 
 
 class AddressSerializer(ModelSerializer):
-    country = CountryField(country_dict=True)
+    country = CountryField(country_dict=True, read_only=True)
     short_address = serializers.CharField(read_only=True)
     full_address = serializers.CharField(read_only=True)
 
@@ -184,7 +185,16 @@ class DiscountCouponSerializer(ModelSerializer):
         model = DiscountCoupon
         fields = ('id', 'code', 'is_used', 'is_expired', 'valid_time', 'valid_date', 'discount')
         read_only_fields = ('id', 'is_expired', 'valid_date')
+# endregion
 
 
+# region Default serializers
 class DiscountCouponCodesSerializer(serializers.Serializer):
     codes = serializers.ListField(child=serializers.CharField(), allow_empty=False, allow_null=False, min_length=1)
+    flat = serializers.BooleanField(required=False)
+
+
+class OrderStatusExtraExplanation(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Order.OrderStatus.choices)
+    status_explanation = serializers.CharField(style={'base_template': 'textarea.html', 'rows': 10})
+# endregion

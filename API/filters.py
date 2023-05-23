@@ -31,12 +31,9 @@ class ProductFilter(filters.FilterSet):
         fields = ['name', 'category', 'description', 'price', 'price_range', 'seller']
 
 
-class ProductTopLeastSellersFilter(filters.FilterSet):
+class ProductStatisticsFilter(filters.FilterSet):
     date_from = django_filters.DateTimeFilter(label='From date limit')
     date_to = django_filters.DateTimeFilter(label='To date limit')
-
-    def base_queryset(self, filter_q):
-        raise NotImplementedError("Can't use query filtering on basic model!")
 
     class Meta:
         model = Product
@@ -60,26 +57,6 @@ class ProductTopLeastSellersFilter(filters.FilterSet):
             date_filter_query.add(Q(orderproductlistitem__order__order_date__lte=date_to_limit), Q.AND)
 
         if date_filter_query:
-            queryset = self.base_queryset(date_filter_query)
+            queryset = queryset.filter(date_filter_query)
 
         return queryset
-
-
-class ProductTopSellersFilter(ProductTopLeastSellersFilter):
-    def base_queryset(self, filter_q):
-        return Product.objects.top_sellers(self.request.user, filter_q)
-
-
-class ProductLeastSellersFilter(ProductTopLeastSellersFilter):
-    def base_queryset(self, filter_q):
-        return Product.objects.least_sellers(self.request.user, filter_q)
-
-
-class ProductTopProfitableFilter(ProductTopLeastSellersFilter):
-    def base_queryset(self, filter_q):
-        return Product.objects.most_profitable(self.request.user, filter_q)
-
-
-class ProductLeastProfitableFilter(ProductTopLeastSellersFilter):
-    def base_queryset(self, filter_q):
-        return Product.objects.least_profitable(self.request.user, filter_q)

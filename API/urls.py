@@ -11,14 +11,11 @@ api_router.register(r'products', views.ProductModelViewSet, basename='api_produc
 api_router.register(r'address', views.AddressModelViewSet, basename='api_address')
 api_router.register(r'orders', views.OrderModelViewSet, basename='api_orders')
 api_router.register(r'coupons', views.DiscountCouponModelViewSet, basename='api_coupons')
+api_router.register(r'statistics', views.ProductStatisticsListAPIView, basename='api_products_stats')
 
 urlpatterns = [
     # API
     path('products/list-create/', views.ProductListCreateAPIView.as_view(), name='api_products_list_create'),
-    path('top-sellers/', views.ProductTopSellersListAPIView.as_view(), name='api_products_top_sellers_list'),
-    path('least-sellers/', views.ProductLeastSellersListAPIView.as_view(), name='api_products_least_sellers_list'),
-    path('most-profitable/', views.ProductTopProfitableListAPIView.as_view(), name='api_products_most_profitable_list'),
-    path('least-profitable/', views.ProductLeastProfitableListAPIView.as_view(), name='api_products_least_profitable_list'),
     path('users/create/', views.UserCreateAPIView.as_view(), name='api_user_create'),
     # Schema
     path('openapi/', get_schema_view(
