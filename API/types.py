@@ -60,7 +60,8 @@ class OrderProductListItemType(DjangoObjectType):
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
-        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount')
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'is_paid', 'status',
+                  'discount')
         convert_choices_to_enum = False
 
     status_name = graphene.String()

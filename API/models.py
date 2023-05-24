@@ -251,34 +251,21 @@ class OrderManager(models.Manager):
             user_q = Q(client=user)
         return user_q
 
-    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str, order_by: str = None) -> list:
+    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str) -> QuerySet:
         """
         Group queryset by `group_key` and annotate corresponding groups its sales and profits
         :param queryset: orders queryset
         :param group_key: grouping key ex. 'months'
-        :return: grouped queryset as list with annotated total sales and profits
+        :return: grouped queryset with annotated total sales and profits
         """
-        sales = queryset.values(group_key).annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField()))
-        ).order_by(group_key)
-        profits = queryset.values(group_key).annotate(
-            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
-        ).order_by(group_key)
-        sales_and_profits = [{**sale, **profit} for sale, profit in zip(sales, profits)]
+        return queryset.values(group_key).annotate(
+            sales=models.Sum('orderproductlistitem__quantity'),
+            profits=models.Sum(
+                models.F('orderproductlistitem__quantity') * models.F('orderproductlistitem__product__price')
+            )
+        )
 
-        if len(sales_and_profits) and order_by:
-            descending = order_by[0] == '-'
-
-            if descending:
-                order_by = order_by[1:]
-
-            if isinstance(sales_and_profits[0], dict):
-                sales_and_profits.sort(key=operator.itemgetter(order_by), reverse=descending)
-            else:
-                sales_and_profits.sort(key=operator.attrgetter(order_by), reverse=descending)
-        return sales_and_profits
-
-    def sales_by_day(self, user: User, date: datetime) -> list:
+    def sales_by_day(self, user: User, date: datetime) -> QuerySet:
         """
         :param user: user model
         :param date: specific day in which we want to count sales and profits, ex 21-04-2023
@@ -296,14 +283,14 @@ class OrderManager(models.Manager):
 
         return self.__annotate_sales_and_profits(q, 'day')
 
-    def today_sales(self, user: User) -> list:
+    def today_sales(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: total sales and profits in current date
         """
         return self.sales_by_day(user, timezone.now())
 
-    def sales_by_month_days(self, user: User, month: int, year: int = None) -> list:
+    def sales_by_month_days(self, user: User, month: int, year: int = None) -> QuerySet:
         """
         :param user: user model
         :param month: month
@@ -320,9 +307,9 @@ class OrderManager(models.Manager):
             day=ExtractDay('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'day')
+        return self.__annotate_sales_and_profits(q, 'day').order_by('day')
 
-    def sales_by_months(self, user: User, year: int = None) -> list:
+    def sales_by_months(self, user: User, year: int = None) -> QuerySet:
         """
         :param user: user model
         :param year: year
@@ -340,9 +327,9 @@ class OrderManager(models.Manager):
             month=ExtractMonth('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'month')
+        return self.__annotate_sales_and_profits(q, 'month').order_by('month')
 
-    def sales_by_years(self, user: User) -> list:
+    def sales_by_years(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: orders grouped by years with annotated total sales and profits in each year
@@ -356,9 +343,9 @@ class OrderManager(models.Manager):
 
         q = q.annotate(year=ExtractYear('order_date'))
 
-        return self.__annotate_sales_and_profits(q, 'year')
+        return self.__annotate_sales_and_profits(q, 'year').order_by('year')
 
-    def sales_by_countries(self, user: User) -> list:
+    def sales_by_countries(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: orders grouped by country of order address with annotated total sales and profits in each country
@@ -367,15 +354,15 @@ class OrderManager(models.Manager):
         user_q = self.__combine_user_filter_q(user)
 
         if user_q:
-            q = self.get_queryset().filter(user_q).prefetch_related('orderproductlistitem_set').select_related(
-                'order_address'
-            ).annotate(country=F('order_address__country'))
+            q = self.get_queryset().filter(user_q).prefetch_related(
+                'orderproductlistitem_set', 'orderproductlistitem_set__product'
+            ).select_related('order_address').annotate(country=F('order_address__country'))
         else:
-            q = self.get_queryset().prefetch_related('orderproductlistitem_set').select_related(
-                'order_address'
-            ).annotate(country=F('order_address__country'))
+            q = self.get_queryset().prefetch_related(
+                'orderproductlistitem_set', 'orderproductlistitem_set__product'
+            ).select_related('order_address').annotate(country=F('order_address__country'))
 
-        return self.__annotate_sales_and_profits(q, 'country', '-profits')
+        return self.__annotate_sales_and_profits(q, 'country').order_by('-profits')
 
 
 class Order(models.Model):
