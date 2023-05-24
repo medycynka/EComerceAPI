@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+
 import graphene
 from graphene_django import DjangoObjectType
 
@@ -8,6 +10,13 @@ from API.models import Product
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
+from API.models import DiscountCoupon
+
+
+class UserType(DjangoObjectType):
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'username', 'email', 'first_name', 'last_name')
 
 
 class ProductCategoryType(DjangoObjectType):
@@ -51,10 +60,13 @@ class OrderProductListItemType(DjangoObjectType):
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
-        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status')
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount')
         convert_choices_to_enum = False
 
+    status_name = graphene.String()
     products_list = graphene.List(OrderProductListItemType)
+    has_discount = graphene.Boolean()
+    final_price = graphene.Decimal()
 
 
 class SalesAndProfitsType(graphene.ObjectType):
@@ -72,3 +84,10 @@ class CountrySalesAndProfitsType(graphene.ObjectType):
     country = graphene.String()
     sales = graphene.BigInt()
     profits = graphene.Decimal()
+
+
+class DiscountCouponType(DjangoObjectType):
+    class Meta:
+        model = DiscountCoupon
+        fields = ('id', 'code', 'is_used', 'is_expired', 'valid_time', 'valid_date', 'discount')
+        convert_choices_to_enum = False

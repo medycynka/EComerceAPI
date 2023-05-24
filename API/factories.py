@@ -1,7 +1,3 @@
-import random
-from datetime import datetime, timedelta
-from string import ascii_letters, digits
-
 # Django
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -18,6 +14,12 @@ from API.models import Product
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
+from API.models import DiscountCoupon
+
+import random
+from datetime import datetime, timedelta
+from decimal import Decimal
+from string import ascii_letters, digits
 
 
 fake = Faker(settings.LANGUAGE_CODE)
@@ -147,4 +149,15 @@ class OrderFactory(DjangoModelFactory):
                 quantity=random.randint(1, 32)
             ) for i in range(count)
         ], count)
-        self.save()
+        self.save(update_full_price=True)
+
+
+class DiscountCouponFactory(DjangoModelFactory):
+    """:model:`API.DiscountCoupon` factory."""
+
+    class Meta:
+        model = DiscountCoupon
+
+    code = factory.LazyFunction(lambda: get_random_string(12))
+    valid_time = factory.LazyFunction(lambda: random.choice(DiscountCoupon.ValidTime.choices)[0])
+    discount = factory.LazyFunction(lambda: Decimal(random.uniform(0, 1)))

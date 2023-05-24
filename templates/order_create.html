@@ -51,6 +51,15 @@
                         </table>
                     </div>
                 </div>
+                <div class="card-body">
+                    <div class="col-sm-8 p-2">
+                        <div class="input-group">
+                            <input type="text" id="couponDiscountChecker" class="form-control" placeholder="Add discount code">
+                            <button class="input-group-text btn btn-primary coupon-checker">Check your code</button>
+                            <div class="invalid-feedback">Invalid coupon code!</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-xl-4 col-md-12">
@@ -84,6 +93,16 @@
                             </div>
                         </div>
                         <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.state|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-12 mb-0">
+                                {{ address_form.street|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group col-md-6 mb-0">
                                 {{ address_form.street_number|as_crispy_field }}
                             </div>
@@ -92,21 +111,11 @@
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group col-md-12 mb-0">
-                                {{ address_form.state|as_crispy_field }}
-                            </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group col-md-4 mb-0">
                                 {{ address_form.post_code|as_crispy_field }}
                             </div>
                             <div class="form-group col-md-8 mb-0">
                                 {{ address_form.city|as_crispy_field }}
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-12 mb-0">
-                                {{ address_form.street|as_crispy_field }}
                             </div>
                         </div>
                     </form>
@@ -125,7 +134,7 @@
                             </tr>
                             <tr>
                                 <td class="border-top-0">Discount</td>
-                                <td class="text-end fw-bold border-top-0">0%</td>
+                                <td class="text-end fw-bold border-top-0" id="discountValue">0%</td>
                             </tr>
                             <tr>
                                 <td class="border-top-0">Shipping</td>
@@ -141,7 +150,7 @@
                 <div class="card-footer">
                     <div class="btn-list text-end">
                         <a href="{% url 'products_list' %}" class="btn btn-primary"><i class="fa fa-arrow-left me-1"></i>Continue Shopping</a>
-                        <a href="javascript:void(0)" class="btn btn-success" onclick="createOrder()">Order<i class="fa fa-arrow-right ms-1"></i></a>
+                        <a href="javascript:void(0)" class="btn btn-success" id="createOrderBtn">Order<i class="fa fa-arrow-right ms-1"></i></a>
                     </div>
                 </div>
             </div>
@@ -150,179 +159,226 @@
 {% endblock %}
 {% block custom_scripts %}
     <script>
-        const fullPrice = document.querySelector('td.text-end.full-price');
-        const fullEndPrice = document.querySelector('td.text-end.full-end-price');
-        const stateSelectRow = $('select#id_state').closest('.form-row');
-        const listContainer = $('.table-responsive>.table>tbody');
-        let shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
-        const updateFullPrice = () => {
-            const prices = document.querySelectorAll('td#singletonPrice');
-            const quantities = document.querySelectorAll('input.qty');
-            let fullProductsPrice = 0;
+        (function () {
+            const fullPrice = document.querySelector('td.text-end.full-price');
+            const fullEndPrice = document.querySelector('td.text-end.full-end-price');
+            const stateSelectRow = $('select#id_state').closest('.form-row');
+            const listContainer = $('.table-responsive>.table>tbody');
+            let shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
+            let currentDiscount = null;
+            const updateFullPrice = () => {
+                const prices = document.querySelectorAll('td#singletonPrice');
+                const quantities = document.querySelectorAll('input.qty');
+                const discount = document.getElementById('discountValue');
+                let fullProductsPrice = 0;
 
-            for (let i = 0; i < prices.length; i++) {
-                fullProductsPrice += Number(prices[i].innerHTML) * parseInt(quantities[i].value);
-            }
+                for (let i = 0; i < prices.length; i++) {
+                    fullProductsPrice += Number(prices[i].innerHTML) * parseInt(quantities[i].value);
+                }
 
-            fullPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
-            fullEndPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
-        };
-        const removeProductRow = (el) => {
-            const productId = $(el).closest('tr').data('product-id').toString();
-            shoppingCart = shoppingCart.filter((product) => product.id !== productId);
-            sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
-            el.parentNode.parentNode.parentNode.removeChild(el.parentNode.parentNode);
-
-            updateFullPrice();
-        };
-        const orderDataSerializer = () => {
-            const data = {
-                "client": "{{ request.user.id }}",
-                "order_address": {},
-                "orderproductlistitem_set": [],
+                fullPrice.innerHTML = `${fullProductsPrice.toFixed(2)} PLN`;
+                fullEndPrice.innerHTML = `${(fullProductsPrice * (1 - Number(discount.innerHTML.replace('%', '')) / 100)).toFixed(2)} PLN`;
             };
-            $("form#clientDataForm").serializeArray().map(field => {
-               data["order_address"][field.name] = field.value;
+            const orderDataSerializer = () => {
+                const data = {
+                    "client": "{{ request.user.id }}",
+                    "order_address": {},
+                    "discount": 0.0,
+                    "discount_id": currentDiscount,
+                    "orderproductlistitem_set": [],
+                };
+                $("form#clientDataForm").serializeArray().map(field => {
+                   data["order_address"][field.name] = field.value;
+                });
+                delete data["order_address"]["name"];
+                delete data["order_address"]["surname"];
+
+                const rows = listContainer[0].querySelectorAll('tr');
+
+                for (let i = 0; i < rows.length; i++) {
+                    if (parseInt(rows[i].children[2].querySelector('input').value) > 0) {
+                        data["orderproductlistitem_set"].push({
+                            "product": rows[i].dataset['productId'],
+                            "quantity": parseInt(rows[i].children[2].querySelector('input').value)
+                        })
+                    }
+                }
+
+                return data
+            };
+
+            stateSelectRow.hide();
+            document.querySelector('select.countryselectwidget')?.addEventListener('change', function () {
+                console.log(this.value, this.value === 'PL', typeof this.value);
+                if (this.value === 'PL') {
+                    stateSelectRow.show();
+                } else {
+                    stateSelectRow.hide();
+                }
             });
-            delete data["order_address"]["name"];
-            delete data["order_address"]["surname"];
+            document.querySelector('a#createOrderBtn').addEventListener('click', function () {
+                const orderData = orderDataSerializer();
+                console.log(orderData);
+                const clientDataForm = document.querySelector('form#clientDataForm');
 
-            const rows = listContainer[0].querySelectorAll('tr');
+                clientDataForm.classList.add('was-validated');
 
-            for (let i = 0; i < rows.length; i++) {
-                if (parseInt(rows[i].children[2].querySelector('input').value) > 0) {
-                    data["orderproductlistitem_set"].push({
-                        "product": rows[i].dataset['productId'],
-                        "quantity": parseInt(rows[i].children[2].querySelector('input').value)
+                if (clientDataForm.checkValidity() === false){
+                    Swal.fire({
+                        title: 'Empty data!',
+                        html: `To finalise your order you need to provide your name, surname and shipping address.`,
+                        icon: 'error',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false
+                    });
+
+                    return false;
+                }
+                if (orderData["orderproductlistitem_set"].length > 0){
+                    $.ajax({
+                        url: "{% url 'api_orders-list' %}",
+                        data: JSON.stringify(orderData),
+                        type: 'POST',
+                        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                        contentType : 'application/json',
+                        success: (data, textStatus, jqXHR) => {
+                            Swal.fire({
+                                title: 'Przyjęto zamówienie!',
+                                html: `Twoje zamówienie o łącznym koszcie <b>${data.total_product_price}</b> PLN i terminie płatności do <b>${data.payment_date}</b> zostało przyjęte do realizacji.`,
+                                icon: 'success',
+                                allowEscapeKey: false,
+                                allowOutsideClick: false
+                            }).then((result) => {
+                                console.log(result);
+                                sessionStorage.removeItem('shopping-cart');
+                                if (result.isConfirmed) {
+                                    window.location.href = '{% url 'products_list' %}';
+                                }
+                            });
+                        },
+                        error: (jqXHR, textStatus, errorThrown) => {
+                            console.log(jqXHR, textStatus, errorThrown);
+                        },
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Your cart is empty!',
+                        html: `Your cart is empty!`,
+                        icon: 'error',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false
                     })
                 }
-            }
-            
-            return data
-        };
-        const createOrder = () => {
-            const orderData = orderDataSerializer();
-            const clientDataForm = document.querySelector('form#clientDataForm');
-
-            clientDataForm.classList.add('was-validated');
-
-            if (clientDataForm.checkValidity() === false){
-                Swal.fire({
-                    title: 'Empty data!',
-                    html: `To finalise your order you need to provide your name, surname and shipping address.`,
-                    icon: 'error',
-                    allowEscapeKey: false,
-                    allowOutsideClick: false
-                });
 
                 return false;
+            });
+
+            for (let i = 0; i < shoppingCart.length; i++) {
+                listContainer.append($(
+                   `
+                    <tr data-product-id="${shoppingCart[i].id}">
+                        <td>${shoppingCart[i].name}</td>
+                        <td class="fw-bold" id="singletonPrice">${shoppingCart[i].price}</td>
+                        <td>
+                            <div class="handle-counter" id="handleCounter4">
+                                <button type="button" class="counter-minus btn btn-default lh-2 shadow-none">
+                                    <i class="fe fe-minus"></i>
+                                </button>
+                                <input type="text" value="1" class="qty">
+                                <button type="button" class="counter-plus btn btn-default lh-2 shadow-none">
+                                    <i class="fe fe-plus "></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="fw-bold" id="fullPrice">${shoppingCart[i].price}</td>
+                        <td>
+                            <a href="javascript:void(0)" class="btn btn-square btn-danger-light me-1" aria-label="Save for Wishlist"><i class="icon icon-heart fs-13"></i></a>
+                            <a href="javascript:void(0)" class="btn btn-square btn-info-light me-1 remove-row" aria-label="Remove"><i class="icon icon-trash fs-13"></i></a>
+                        </td>
+                    </tr>
+                    `
+                ));
             }
 
-            if (orderData["orderproductlistitem_set"].length > 0){
-                $.ajax({
-                    url: "{% url 'api_orders-list' %}",
-                    data: JSON.stringify(orderData),
-                    type: 'POST',
-                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                    contentType : 'application/json',
-                    success: (data, textStatus, jqXHR) => {
-                        Swal.fire({
-                            title: 'Przyjęto zamówienie!',
-                            html: `Twoje zamówienie o łącznym koszcie <b>${data.total_product_price}</b> PLN i terminie płatności do <b>${data.payment_date}</b> zostało przyjęte do realizacji.`,
-                            icon: 'success',
-                            allowEscapeKey: false,
-                            allowOutsideClick: false
-                        }).then((result) => {
-                            console.log(result);
-                            sessionStorage.removeItem('shopping-cart');
-                            if (result.isConfirmed) {
-                                window.location.href = '{% url 'products_list' %}';
+            $('.counter-plus').on('click', function () {
+                const quantityHolder = $(this).closest('div').find('.qty');
+                const currentVal = parseInt(quantityHolder.val());
+                if (!isNaN(currentVal)) {
+                    quantityHolder.val(currentVal + 1);
+
+                    const rowParentEl = $(this).closest('tr');
+                    rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal + 1)).toFixed(2);
+
+                    updateFullPrice();
+                }
+            });
+            $('.counter-minus').on('click', function () {
+                const quantityHolder = $(this).closest('div').find('.qty');
+                const currentVal = parseInt(quantityHolder.val());
+                if (!isNaN(currentVal) && currentVal > 0) {
+                    quantityHolder.val(currentVal - 1);
+
+                    const rowParentEl = $(this).closest('tr');
+                    rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal - 1)).toFixed(2);
+
+                    updateFullPrice();
+                }
+            });
+            $('input.qty').on('input', function () {
+                const rowParentEl = $(this).closest('tr');
+                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * parseInt(this.value)).toFixed(2);
+
+                updateFullPrice();
+            });
+            $('.remove-row').on('click', function () {
+                const productId = $(this).closest('tr').data('product-id').toString();
+                shoppingCart = shoppingCart.filter((product) => product.id !== productId);
+                sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
+                el.parentNode.parentNode.parentNode.removeChild(el.parentNode.parentNode);
+
+                updateFullPrice();
+
+                return false
+            });
+            $('input#couponDiscountChecker').on('input', function () {
+                if (!this.value?.length) currentDiscount =  null;
+            });
+            $('button.coupon-checker').on('click', function () {
+                const couponInput = document.getElementById('couponDiscountChecker');
+                const couponCode = couponInput.value;
+                if (couponCode && couponCode !== ''){
+                    $.ajax({
+                        url: "{% url 'api_coupons-api_coupons_validation_check' %}",
+                        data: JSON.stringify({"codes": [couponCode], "flat": false}),
+                        type: 'POST',
+                        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                        contentType : 'application/json',
+                        success: (data, textStatus, jqXHR) => {
+                            const discountValue = document.getElementById('discountValue');
+
+                            if (data[couponCode].valid) {
+                                couponInput.classList.remove('is-invalid');
+                                couponInput.classList.add('is-valid');
+                                discountValue.innerHTML = `${(Number(data[couponCode].discount) * 100).toFixed(0)}%`;
+                                currentDiscount = data[couponCode].id;
+                                couponInput.nextElementSibling.nextElementSibling.innerHTML = "Invalid coupon code!";
+                            } else {
+                                couponInput.nextElementSibling.nextElementSibling.innerHTML = data[couponCode]["invalid_reason"];
+                                couponInput.classList.remove('is-valid');
+                                couponInput.classList.add('is-invalid');
+                                discountValue.innerHTML = "0%";
                             }
-                        });
-                    },
-                    error: (jqXHR, textStatus, errorThrown) => {
-                        console.log(jqXHR, textStatus, errorThrown);
-                    },
-                })
-            } else {
-                Swal.fire({
-                    title: 'Your cart is empty!',
-                    html: `Your cart is empty!`,
-                    icon: 'error',
-                    allowEscapeKey: false,
-                    allowOutsideClick: false
-                })
-            }
-        };
 
-        stateSelectRow.hide();
-        document.querySelector('select.countryselectwidget')?.addEventListener('change', function () {
-            console.log(this.value, this.value === 'PL', typeof this.value);
-            if (this.value === 'PL') {
-                stateSelectRow.show();
-            } else {
-                stateSelectRow.hide();
-            }
-        });
-
-        for (let i = 0; i < shoppingCart.length; i++) {
-            listContainer.append($(
-               `
-                <tr data-product-id="${shoppingCart[i].id}">
-                    <td>${shoppingCart[i].name}</td>
-                    <td class="fw-bold" id="singletonPrice">${shoppingCart[i].price}</td>
-                    <td>
-                        <div class="handle-counter" id="handleCounter4">
-                            <button type="button" class="counter-minus btn btn-default lh-2 shadow-none">
-                                <i class="fe fe-minus"></i>
-                            </button>
-                            <input type="text" value="1" class="qty">
-                            <button type="button" class="counter-plus btn btn-default lh-2 shadow-none">
-                                <i class="fe fe-plus "></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="fw-bold" id="fullPrice">${shoppingCart[i].price}</td>
-                    <td>
-                        <a href="javascript:void(0)" class="btn btn-square btn-danger-light me-1" aria-label="Save for Wishlist"><i class="icon icon-heart fs-13"></i></a>
-                        <a href="javascript:void(0)" onclick="removeProductRow(this)" class="btn btn-square btn-info-light me-1" aria-label="Remove"><i class="icon icon-trash fs-13"></i></a>
-                    </td>
-                </tr>
-                `
-            ));
-        }
-        
-        $('.counter-plus').on('click',function(){
-            const quantityHolder = $(this).closest('div').find('.qty');
-            const currentVal = parseInt(quantityHolder.val());
-            if (!isNaN(currentVal)) {
-                quantityHolder.val(currentVal + 1);
-
-                const rowParentEl = $(this).closest('tr');
-                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal + 1)).toFixed(2);
-
-                updateFullPrice();
-            }
-        });
-        $('.counter-minus').on('click',function(){
-            const quantityHolder = $(this).closest('div').find('.qty');
-            const currentVal = parseInt(quantityHolder.val());
-            if (!isNaN(currentVal) && currentVal > 0) {
-                quantityHolder.val(currentVal - 1);
-
-                const rowParentEl = $(this).closest('tr');
-                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * (currentVal - 1)).toFixed(2);
-
-                updateFullPrice();
-            }
-        });
-        $('input.qty').on('input', function () {
-            const rowParentEl = $(this).closest('tr');
-            rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * parseInt(this.value)).toFixed(2);
+                            updateFullPrice();
+                        },
+                        error: (jqXHR, textStatus, errorThrown) => {
+                            console.log(jqXHR, textStatus, errorThrown);
+                        },
+                    });
+                }
+            });
 
             updateFullPrice();
-        });
-
-        updateFullPrice();
+        })();
     </script>
 {% endblock %}

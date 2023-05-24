@@ -12,13 +12,15 @@ from API.models import Product
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
+from API.models import DiscountCoupon
 
 
+# region Models Serializers
 class UserSerializer(ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('id', 'username', 'email')
-        read_only_fields = ('id', 'username', 'email')
+        read_only_fields = fields
 
 
 class UserCreateSerializer(ModelSerializer):
@@ -49,8 +51,8 @@ class UserCreateSerializer(ModelSerializer):
 class ProductCategorySerializer(ModelSerializer):
     class Meta:
         model = ProductCategory
-        fields = ('id', 'name',)
-        read_only_fields = ('id', 'name')
+        fields = ('id', 'name')
+        read_only_fields = fields
 
 
 class ProductSerializer(ModelSerializer):
@@ -60,7 +62,7 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        read_only_fields = fields
 
 
 class ProductManageSerializer(ModelSerializer):
@@ -80,7 +82,7 @@ class ProductTopLeastSellersSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
+        read_only_fields = fields
 
 
 class ProductTopLeastProfitableSerializer(ModelSerializer):
@@ -91,8 +93,7 @@ class ProductTopLeastProfitableSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
-        read_only_fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count',
-                            'total_profit')
+        read_only_fields = fields
 
 
 class ProductListItemSerializer(ModelSerializer):
@@ -101,11 +102,16 @@ class ProductListItemSerializer(ModelSerializer):
     class Meta:
         model = OrderProductListItem
         fields = ('id', 'product', 'quantity')
-        read_only_fields = ('id', 'product', 'quantity')
+        read_only_fields = fields
+
+
+class ProductListItemCreateSerializer(ProductListItemSerializer):
+    class Meta(ProductListItemSerializer.Meta):
+        read_only_fields = ('id',)
 
 
 class AddressSerializer(ModelSerializer):
-    country = CountryField(country_dict=True)
+    country = CountryField(country_dict=True, read_only=True)
     short_address = serializers.CharField(read_only=True)
     full_address = serializers.CharField(read_only=True)
 
@@ -113,8 +119,7 @@ class AddressSerializer(ModelSerializer):
         model = Address
         fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code', 'state',
                   'short_address', 'full_address')
-        read_only_fields = ('id', 'country', 'city', 'street', 'street_number', 'street_number_local', 'post_code',
-                            'state', 'short_address', 'full_address')
+        read_only_fields = fields
 
 
 class OrderCreateAddressSerializer(AddressSerializer):
@@ -129,10 +134,9 @@ class OrderSerializer(ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
-                  'products_list')
-        read_only_fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status',
-                            'products_list',)
+        fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount',
+                  'final_price', 'products_list')
+        read_only_fields = fields
 
     def get_products_list(self, obj):
         return ProductListItemSerializer(obj.products_list, many=True).data
@@ -141,16 +145,26 @@ class OrderSerializer(ModelSerializer):
 class OrderCreateSerializer(ModelSerializer):
     client = serializers.PrimaryKeyRelatedField(queryset=get_user_model().objects.all())
     order_address = OrderCreateAddressSerializer()
-    orderproductlistitem_set = ProductListItemSerializer(many=True)
+    orderproductlistitem_set = ProductListItemCreateSerializer(many=True)
 
     class Meta:
         model = Order
-        fields = ('client', 'order_address', 'orderproductlistitem_set', 'products')
+        fields = ('client', 'order_address', 'orderproductlistitem_set', 'discount',)
         read_only_fields = ('id',)
 
     def create(self, validated_data):
         order_products = validated_data.pop('orderproductlistitem_set')
         address_data = validated_data.pop('order_address')
+        discount = validated_data.pop('discount_id', None)
+
+        if discount is not None:
+            discount = DiscountCoupon.objects.get(pk=discount)
+            discount.is_used = True
+            discount.save()
+            validated_data['discount'] = discount.discount
+        else:
+            validated_data['discount'] = 0.0
+
         order_address = Address.objects.create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)
@@ -161,6 +175,26 @@ class OrderCreateSerializer(ModelSerializer):
         ]
 
         OrderProductListItem.objects.bulk_create(products_list)
-        instance.save()
+        instance.save(update_full_price=True)
 
         return instance
+
+
+class DiscountCouponSerializer(ModelSerializer):
+    class Meta:
+        model = DiscountCoupon
+        fields = ('id', 'code', 'is_used', 'is_expired', 'valid_time', 'valid_date', 'discount')
+        read_only_fields = ('id', 'is_expired', 'valid_date')
+# endregion
+
+
+# region Default serializers
+class DiscountCouponCodesSerializer(serializers.Serializer):
+    codes = serializers.ListField(child=serializers.CharField(), allow_empty=False, allow_null=False, min_length=1)
+    flat = serializers.BooleanField(required=False)
+
+
+class OrderStatusExtraExplanation(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Order.OrderStatus.choices)
+    status_explanation = serializers.CharField(style={'base_template': 'textarea.html', 'rows': 10})
+# endregion

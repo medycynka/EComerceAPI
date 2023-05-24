@@ -18,6 +18,8 @@ from PIL import Image
 import os
 from io import BytesIO
 from datetime import timedelta, datetime
+from decimal import Decimal
+import operator
 
 # Create your models here.
 
@@ -249,19 +251,34 @@ class OrderManager(models.Manager):
             user_q = Q(client=user)
         return user_q
 
-    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str) -> QuerySet:
+    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str, order_by: str = None) -> list:
         """
         Group queryset by `group_key` and annotate corresponding groups its sales and profits
         :param queryset: orders queryset
         :param group_key: grouping key ex. 'months'
-        :return: grouped queryset with annotated total sales and profits
+        :return: grouped queryset as list with annotated total sales and profits
         """
-        return queryset.values(group_key).annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+        sales = queryset.values(group_key).annotate(
+            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField()))
+        ).order_by(group_key)
+        profits = queryset.values(group_key).annotate(
             profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
-        )
+        ).order_by(group_key)
+        sales_and_profits = [{**sale, **profit} for sale, profit in zip(sales, profits)]
 
-    def sales_by_day(self, user: User, date: datetime) -> QuerySet:
+        if len(sales_and_profits) and order_by:
+            descending = order_by[0] == '-'
+
+            if descending:
+                order_by = order_by[1:]
+
+            if isinstance(sales_and_profits[0], dict):
+                sales_and_profits.sort(key=operator.itemgetter(order_by), reverse=descending)
+            else:
+                sales_and_profits.sort(key=operator.attrgetter(order_by), reverse=descending)
+        return sales_and_profits
+
+    def sales_by_day(self, user: User, date: datetime) -> list:
         """
         :param user: user model
         :param date: specific day in which we want to count sales and profits, ex 21-04-2023
@@ -277,16 +294,16 @@ class OrderManager(models.Manager):
             day=ExtractDay('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'day').values('sales', 'profits')
+        return self.__annotate_sales_and_profits(q, 'day')
 
-    def today_sales(self, user: User) -> QuerySet:
+    def today_sales(self, user: User) -> list:
         """
         :param user: user model
         :return: total sales and profits in current date
         """
         return self.sales_by_day(user, timezone.now())
 
-    def sales_by_month_days(self, user: User, month: int, year: int = None) -> QuerySet:
+    def sales_by_month_days(self, user: User, month: int, year: int = None) -> list:
         """
         :param user: user model
         :param month: month
@@ -305,7 +322,7 @@ class OrderManager(models.Manager):
 
         return self.__annotate_sales_and_profits(q, 'day')
 
-    def sales_by_months(self, user: User, year: int = None) -> QuerySet:
+    def sales_by_months(self, user: User, year: int = None) -> list:
         """
         :param user: user model
         :param year: year
@@ -323,9 +340,9 @@ class OrderManager(models.Manager):
             month=ExtractMonth('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'month').order_by('month')
+        return self.__annotate_sales_and_profits(q, 'month')
 
-    def sales_by_years(self, user: User) -> QuerySet:
+    def sales_by_years(self, user: User) -> list:
         """
         :param user: user model
         :return: orders grouped by years with annotated total sales and profits in each year
@@ -339,9 +356,9 @@ class OrderManager(models.Manager):
 
         q = q.annotate(year=ExtractYear('order_date'))
 
-        return self.__annotate_sales_and_profits(q, 'year').order_by('year')
+        return self.__annotate_sales_and_profits(q, 'year')
 
-    def sales_by_countries(self, user: User) -> QuerySet:
+    def sales_by_countries(self, user: User) -> list:
         """
         :param user: user model
         :return: orders grouped by country of order address with annotated total sales and profits in each country
@@ -358,7 +375,7 @@ class OrderManager(models.Manager):
                 'order_address'
             ).annotate(country=F('order_address__country'))
 
-        return self.__annotate_sales_and_profits(q, 'country').order_by('-profits')
+        return self.__annotate_sales_and_profits(q, 'country', '-profits')
 
 
 class Order(models.Model):
@@ -438,7 +455,7 @@ class Order(models.Model):
         REFUND_REJECTED = 17, _('Refund Rejected')
         DISPUTED = 18, _('Disputed')
 
-    UNPAID_STATUS = [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT]
+    UNPAID_STATUS = [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT, OrderStatus.EXPIRED]
 
     client = models.ForeignKey(User, verbose_name=_("Client"), null=True, on_delete=models.SET_NULL)
     order_address = models.ForeignKey('API.Address', verbose_name=_("Order address"), null=True, on_delete=models.SET_NULL)
@@ -446,9 +463,11 @@ class Order(models.Model):
     payment_deadline = models.DateTimeField(verbose_name=_('Payment deadline'), blank=True)
     full_price = models.DecimalField(verbose_name=_('Order summary price'), blank=True, null=True, decimal_places=2,
                                      max_digits=20)
-    is_paid = models.BooleanField(verbose_name=_('Id order paid?'), blank=True, default=False)
+    is_paid = models.BooleanField(verbose_name=_('Is order paid?'), blank=True, default=False)
     status = models.PositiveSmallIntegerField(_("Order status"), choices=OrderStatus.choices, blank=True,
                                               default=OrderStatus.PENDING)
+    discount = models.DecimalField(verbose_name=_('Order discount'), blank=True, null=True, decimal_places=2,
+                                   max_digits=3, default=0.0)
 
     objects = OrderManager()
 
@@ -456,7 +475,7 @@ class Order(models.Model):
         db_table = "API_order"
 
     @property
-    def products_list(self):
+    def products_list(self) -> QuerySet:
         """
         :return: :model:`Common.Product` list associated with this order
         """
@@ -464,12 +483,33 @@ class Order(models.Model):
             order=self
         ).only('product', 'quantity')
 
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+    @property
+    def has_discount(self) -> bool:
+        """
+        :return: check if this order has discount
+        """
+        return self.discount > Decimal(0.0)
+
+    @property
+    def final_price(self) -> Decimal:
+        """
+        :return: final order price with discount included ex. for 20% discount final price would be 80% of total price
+        """
+        return self.full_price * (Decimal(1.0) - self.discount) if self.has_discount else self.full_price
+
+    @property
+    def status_name(self) -> str:
+        """
+        Property wrapper for GraphQl schema types
+        """
+        return self.get_status_display()
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None, update_full_price=False):
         if not self.order_date:
             self.order_date = timezone.now()
         if not self.payment_deadline:
             self.payment_deadline = self.order_date + timedelta(days=settings.PAYMENT_DEADLINE_DAYS)
-        if not self.full_price and self.products_list.exists():
+        if update_full_price and not self.full_price and self.products_list.exists():
             self.full_price = self.products_list.aggregate(
                 full_price=models.Sum(F('product__price') * F('quantity'), output_field=models.DecimalField())
             )['full_price']
@@ -489,3 +529,35 @@ class OrderProductListItem(models.Model):
 
     class Meta:
         db_table = "API_order_product_list_item"
+
+
+class DiscountCoupon(models.Model):
+    class ValidTime(models.IntegerChoices):
+        """
+        How long this coupon is valid, ex 7 days
+        """
+        ONE_DAY = 1, _('One day')
+        THREE_DAYS = 3, _('Three days')
+        ONE_WEEK = 7, _('One week')
+        TWO_WEEKS = 14, _('Two weeks')
+        ONE_MONTH = 30, _('One month')
+        THREE_MONTHS = 91, _('Three months')
+        ONE_YEAR = 365, _('Ono year')
+
+    code = models.CharField(verbose_name=_("Coupon code"), max_length=32)
+    is_used = models.BooleanField(verbose_name=_('Id coupon used?'), blank=True, default=False)
+    is_expired = models.BooleanField(verbose_name=_('Id coupon expired?'), blank=True, default=False)
+    valid_time = models.PositiveSmallIntegerField(_("Valid time"), choices=ValidTime.choices, blank=True,
+                                                  default=ValidTime.ONE_DAY)
+    valid_date = models.DateTimeField(verbose_name=_('Payment deadline'), blank=True)
+    discount = models.DecimalField(verbose_name=_('Discount'), blank=True, null=True, decimal_places=2,
+                                   max_digits=3, default=0.0)
+
+    class Meta:
+        db_table = "API_discount_coupon"
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        if not self.valid_date:
+            self.valid_date = timezone.now() + timedelta(days=self.valid_time)
+
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)

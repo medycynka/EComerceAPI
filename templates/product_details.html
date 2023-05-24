@@ -43,9 +43,8 @@
                         </div>
                     </div>
                     <div class="text-center mt-5 pb-5 border-bottom">
-                        <a href="javascript:void(0)" onclick="addToShoppingCart()" class="btn btn-primary"><i class="ti-shopping-cart"> </i> Add to cart</a>
+                        <a href="javascript:void(0)" id="addToShoppingCartBtn" class="btn btn-primary"><i class="ti-shopping-cart"> </i> Add to cart</a>
                     </div>
-
                     <div class="mt-4 mb-4">
                         <h3 id="productName">Lenovo Headset 330 Pentium Quad Core </h3>
                         <h5 id="productCategory" class="mb-3 mt-2">Description</h5>
@@ -176,246 +175,250 @@
 {% endblock %}
 {% block custom_scripts %}
     <script>
-        const canBuyProducts = '{{ request.user|is_client }}' === 'True';
-        const canEditProducts = '{{ request.user|is_seller }}' === 'True';
-        const shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
-        const shoppingCartIds = new Set(shoppingCart.map((value, idx, arr) => value.id));
-        let template = '';
-        let photoContent;
+        (function(){
+            const canBuyProducts = '{{ request.user|is_client }}' === 'True';
+            const canEditProducts = '{{ request.user|is_seller }}' === 'True';
+            const shoppingCart = JSON.parse(sessionStorage.getItem('shopping-cart')) || [];
+            const shoppingCartIds = new Set(shoppingCart.map((value, idx, arr) => value.id));
+            let template = '';
+            let photoContent;
 
-        if (canBuyProducts) {
-            shoppingCart.length = 0;
-            shoppingCartIds.clear();
-            sessionStorage.removeItem('shopping-cart')
-        }
-
-        let addToShoppingCart = (name, price, productId) => {
-            if (canBuyProducts && !shoppingCartIds.has(productId)) {
-                shoppingCartIds.add(productId);
-                shoppingCart.push({
-                   'id': productId,
-                    'name': name,
-                    'price': price,
-                });
-                sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
-                Growl.growl({
-                    style: 'notice',
-                    title: 'Dodano do koszyka',
-                    duration: 1000,
-                    message: `Dodano ${name} do Twojego koszyka`,
-                });
+            if (canBuyProducts) {
+                shoppingCart.length = 0;
+                shoppingCartIds.clear();
+                sessionStorage.removeItem('shopping-cart')
             }
-        };
 
-        {% if request.user|is_seller or request.user.is_superuser %}
-            let deleteProduct = () => {
-                Swal.fire({
-                    title: 'Warning!',
-                    html: `Are you sure you want to delete this product?`,
-                    icon: 'warning',
-                    showDenyButton: true,
-                    denyButtonText: 'Cancel',
-                    allowEscapeKey: false,
-                    allowOutsideClick: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "{% url 'api_products-detail' pk=product_pk %}",
-                            type: 'DELETE',
-                            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                            contentType : 'application/json',
-                            success: (data, textStatus, jqXHR) => {
-                                window.location.href = '{% url 'products_list' %}';
-                            },
-                            error: (jqXHR, textStatus, errorThrown) => {
-                                console.log(jqXHR, textStatus, errorThrown);
-                            },
-                        });
-                    }
-                });
+            let addToShoppingCart = (name, price, productId) => {
+                if (canBuyProducts && !shoppingCartIds.has(productId)) {
+                    shoppingCartIds.add(productId);
+                    shoppingCart.push({
+                       'id': productId,
+                        'name': name,
+                        'price': price,
+                    });
+                    sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
+                    Growl.growl({
+                        style: 'notice',
+                        title: 'Dodano do koszyka',
+                        duration: 1000,
+                        message: `Dodano ${name} do Twojego koszyka`,
+                    });
+                }
             };
-            let editProduct = () => {
-                Swal.fire({
-                    title: 'Edit product',
-                    html: template,
-                    showDenyButton: true,
-                    denyButtonText: 'Cancel',
-                    allowEscapeKey: false,
-                    allowOutsideClick: false,
-                    preConfirm: () => {
-                        const formContainer = document.querySelector('form#editForm');
-                        formContainer.classList.add('was-validated');
 
-                        if (formContainer.checkValidity() === false){
-                            return false
+            {% if request.user|is_seller or request.user.is_superuser %}
+                let deleteProduct = () => {
+                    Swal.fire({
+                        title: 'Warning!',
+                        html: `Are you sure you want to delete this product?`,
+                        icon: 'warning',
+                        showDenyButton: true,
+                        denyButtonText: 'Cancel',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{% url 'api_products-detail' pk=product_pk %}",
+                                type: 'DELETE',
+                                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                                contentType : 'application/json',
+                                success: (data, textStatus, jqXHR) => {
+                                    window.location.href = '{% url 'products_list' %}';
+                                },
+                                error: (jqXHR, textStatus, errorThrown) => {
+                                    console.log(jqXHR, textStatus, errorThrown);
+                                },
+                            });
                         }
-                    },
-                    didOpen: (el) => {
-                        console.log(el);
-                        let urlToFile = (url) => {
-                            return (fetch(url)
-                                    .then(function (res) {
-                                        return res.arrayBuffer();
-                                    })
-                                    .then(function (buf) {
-                                        const fileNameFull = url.split('/').slice(-1)[0];
-                                        const fileExt = fileNameFull.split('.').slice(-1)[0];
-                                        return new File([buf], fileNameFull, {type: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`});
-                                    })
-                            );
-                        };
-                        urlToFile(el.querySelector('a#photo-clear_id_preview').href).then((f) => {
-                            console.log(f);
+                    });
+                };
+                let editProduct = () => {
+                    Swal.fire({
+                        title: 'Edit product',
+                        html: template,
+                        showDenyButton: true,
+                        denyButtonText: 'Cancel',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                        preConfirm: () => {
+                            const formContainer = document.querySelector('form#editForm');
+                            formContainer.classList.add('was-validated');
 
-                            function FakeDataTransfer(files) {
-                                this.dropEffect = 'all';
-                                this.effectAllowed = 'all';
-                                this.items = [];
-                                this.types = ['Files'];
-                                this.getData = function () {
-                                    return this.dt;
-                                };
-                                this.dt = new DataTransfer();
-                                for (let i = 0; i < files.length; i++) {
-                                    this.dt.items.add(files[i])
-                                }
+                            if (formContainer.checkValidity() === false){
+                                return false
                             }
+                        },
+                        didOpen: (el) => {
+                            console.log(el);
+                            let urlToFile = (url) => {
+                                return (fetch(url)
+                                        .then(function (res) {
+                                            return res.arrayBuffer();
+                                        })
+                                        .then(function (buf) {
+                                            const fileNameFull = url.split('/').slice(-1)[0];
+                                            const fileExt = fileNameFull.split('.').slice(-1)[0];
+                                            return new File([buf], fileNameFull, {type: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`});
+                                        })
+                                );
+                            };
+                            urlToFile(el.querySelector('a#photo-clear_id_preview').href).then((f) => {
+                                console.log(f);
 
-                            let fakeDropEvent = new DragEvent('drop');
-                            Object.defineProperty(fakeDropEvent, 'dataTransfer', {
-                                value: new FakeDataTransfer([f])
-                            });
-                            const photoInput = el.querySelector('input#id_photo');
-                            $(photoInput).on('drop', function (e) {
-                                if (e.originalEvent.dataTransfer && typeof e.originalEvent.dataTransfer.getData === 'function') {
-                                    photoInput.files = e.originalEvent.dataTransfer.getData().files;
-                                    $(this).off('drop');
+                                function FakeDataTransfer(files) {
+                                    this.dropEffect = 'all';
+                                    this.effectAllowed = 'all';
+                                    this.items = [];
+                                    this.types = ['Files'];
+                                    this.getData = function () {
+                                        return this.dt;
+                                    };
+                                    this.dt = new DataTransfer();
+                                    for (let i = 0; i < files.length; i++) {
+                                        this.dt.items.add(files[i])
+                                    }
                                 }
+
+                                let fakeDropEvent = new DragEvent('drop');
+                                Object.defineProperty(fakeDropEvent, 'dataTransfer', {
+                                    value: new FakeDataTransfer([f])
+                                });
+                                const photoInput = el.querySelector('input#id_photo');
+                                $(photoInput).on('drop', function (e) {
+                                    if (e.originalEvent.dataTransfer && typeof e.originalEvent.dataTransfer.getData === 'function') {
+                                        photoInput.files = e.originalEvent.dataTransfer.getData().files;
+                                        $(this).off('drop');
+                                    }
+                                });
+                                photoInput.dispatchEvent(fakeDropEvent)
+                            })
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{% url 'api_products-detail' pk=product_pk %}",
+                                type: 'PUT',
+                                data: new FormData(document.querySelector('form#editForm')),
+                                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                                contentType : false,
+                                processData : false,
+                                success: (data, textStatus, jqXHR) => {
+                                    window.location.reload()
+                                },
+                                error: (jqXHR, textStatus, errorThrown) => {
+                                    console.log(jqXHR, textStatus, errorThrown);
+                                },
                             });
-                            photoInput.dispatchEvent(fakeDropEvent)
-                        })
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "{% url 'api_product_manage' pk=product_pk %}",
-                            type: 'PUT',
-                            data: new FormData(document.querySelector('form#editForm')),
-                            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                            contentType : false,
-                            processData : false,
-                            success: (data, textStatus, jqXHR) => {
-                                window.location.reload()
-                            },
-                            error: (jqXHR, textStatus, errorThrown) => {
-                                console.log(jqXHR, textStatus, errorThrown);
-                            },
-                        });
-                    }
-                });
-            };
+                        }
+                    });
+                };
 
-            $('button#productEditBtn').on('click', editProduct);
-            $('button#productDeleteBtn').on('click', deleteProduct);
-        {% endif %}
+                $('button#productEditBtn').on('click', editProduct);
+                $('button#productDeleteBtn').on('click', deleteProduct);
+            {% endif %}
 
-        $.ajax({
-            url: "{% url 'api_product_details' pk=product_pk %}",
-            data: null,
-            type: 'GET',
-            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-            contentType : 'application/json',
-            processData : true,
-            success: (data, textStatus, jqXHR) => {
-                console.log(data);
+            $.ajax({
+                url: "{% url 'api_products-detail' pk=product_pk %}",
+                data: null,
+                type: 'GET',
+                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                contentType : 'application/json',
+                processData : true,
+                success: (data, textStatus, jqXHR) => {
+                    console.log(data);
 
-                // Details view
-                document.querySelector('a#productName').innerHTML = data.name;
-                document.querySelector('h3#productName').innerHTML = data.name;
-                document.querySelector('h5#productCategory').innerHTML = "Kategoria: " + data.category.name;
-                document.querySelector('p#productDescription').innerHTML = data.description;
-                document.querySelector('img#productPhoto').src = data.photo;
+                    // Details view
+                    document.querySelector('a#productName').innerHTML = data.name;
+                    document.querySelector('h3#productName').innerHTML = data.name;
+                    document.querySelector('h5#productCategory').innerHTML = "Kategoria: " + data.category.name;
+                    document.querySelector('p#productDescription').innerHTML = data.description;
+                    document.querySelector('img#productPhoto').src = data.photo;
 
-                // Edit data
-                if (canEditProducts) {
-                    template = `
-                        <form id="editForm" novalidate style="overflow:hidden;">
-                            <div class="form-row">
-                                <div class="form-group col-md-12 mb-0">
-                                    <div id="div_id_name" class="mb-3">
-                                        <label for="id_name" class="form-label requiredField">
-                                            Name<span class="asteriskField">*</span>
-                                        </label>
-                                        <input type="text" name="name" value="${data.name}" placeholder="Product name" maxlength="255" class="textinput textInput form-control" required="" id="id_name">
+                    // Edit data
+                    if (canEditProducts) {
+                        template = `
+                            <form id="editForm" novalidate style="overflow:hidden;">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12 mb-0">
+                                        <div id="div_id_name" class="mb-3">
+                                            <label for="id_name" class="form-label requiredField">
+                                                Name<span class="asteriskField">*</span>
+                                            </label>
+                                            <input type="text" name="name" value="${data.name}" placeholder="Product name" maxlength="255" class="textinput textInput form-control" required="" id="id_name">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-12 mb-0">
-                                    <div id="div_id_description" class="mb-3">
-                                        <label for="id_description" class="form-label requiredField">Description</label>
-                                        <textarea name="description" placeholder="Product description" class="textarea form-control" id="id_description">${data.description}</textarea>
+                                <div class="form-row">
+                                    <div class="form-group col-md-12 mb-0">
+                                        <div id="div_id_description" class="mb-3">
+                                            <label for="id_description" class="form-label requiredField">Description</label>
+                                            <textarea name="description" placeholder="Product description" class="textarea form-control" id="id_description">${data.description}</textarea>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-6 mb-0">
-                                    <div id="div_id_price" class="mb-3">
-                                        <label for="id_price" class="form-label requiredField">
-                                            Price<span class="asteriskField">*</span>
-                                        </label>
-                                        <input type="number" min="0" step="0.01" max="100000" value="${data.price}" name="price" placeholder="Product price" maxlength="255" class="textinput textInput form-control" required="" id="id_price">
+                                <div class="form-row">
+                                    <div class="form-group col-md-6 mb-0">
+                                        <div id="div_id_price" class="mb-3">
+                                            <label for="id_price" class="form-label requiredField">
+                                                Price<span class="asteriskField">*</span>
+                                            </label>
+                                            <input type="number" min="0" step="0.01" max="100000" value="${data.price}" name="price" placeholder="Product price" maxlength="255" class="textinput textInput form-control" required="" id="id_price">
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-md-6 mb-0">
+                                        <div id="div_id_category" class="mb-3">
+                                            <label class="form-label" for="id_category">Category<span class="asterixField">*</span></label>
+                                            <select name="category" id="id_category" class="form-control form-select" data-bs-placeholder="Category" required>
+                                                <option value="">---------</option>
+                                                {% if categories %}
+                                                    {% for category in categories %}
+                                                        <option value="{{ category.pk }}" ${'{{ category.pk }}' === data.category.id.toString() ? 'selected' : ''}>{{ category.name }}</option>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-group col-md-6 mb-0">
-                                    <div id="div_id_category" class="mb-3">
-                                        <label class="form-label" for="id_category">Category<span class="asterixField">*</span></label>
-                                        <select name="category" id="id_category" class="form-control form-select" data-bs-placeholder="Category" required>
-                                            <option value="">---------</option>
-                                            {% if categories %}
-                                                {% for category in categories %}
-                                                    <option value="{{ category.pk }}" ${'{{ category.pk }}' === data.category.id.toString() ? 'selected' : ''}>{{ category.name }}</option>
-                                                {% endfor %}
-                                            {% endif %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-12 mb-0">
-                                    <div id="div_id_main_photo" class="mb-3">
-                                        <label for="id_photo" class="form-label">
-                                            Preview image<span class="asteriskField">*</span>
-                                        </label>
-                                        <div class=" mb-2">
-                                            <div class="input-group mb-2">
-                                                <span class="input-group-text">Teraz</span>
-                                                <div class="form-control d-flex h-auto">
-                                                    <span class="text-break" style="flex-grow:1;min-width:0">
-                                                        <a href="${data.photo}" id="photo-clear_id_preview">${data.photo.split('/').slice(-1)[0]}</a>
-                                                    </span>
-                                                    <span class="align-self-center ml-2">
-                                                        <span class="form-check">
-                                                            <input type="checkbox" name="photo-clear" id="photo-clear_id" class="form-check-input">
-                                                            <label class="form-check-label mb-0" for="photo-clear_id">Wyczyść</label>
+                                <div class="form-row">
+                                    <div class="form-group col-md-12 mb-0">
+                                        <div id="div_id_main_photo" class="mb-3">
+                                            <label for="id_photo" class="form-label">
+                                                Preview image<span class="asteriskField">*</span>
+                                            </label>
+                                            <div class=" mb-2">
+                                                <div class="input-group mb-2">
+                                                    <span class="input-group-text">Teraz</span>
+                                                    <div class="form-control d-flex h-auto">
+                                                        <span class="text-break" style="flex-grow:1;min-width:0">
+                                                            <a href="${data.photo}" id="photo-clear_id_preview">${data.photo.split('/').slice(-1)[0]}</a>
                                                         </span>
-                                                    </span>
+                                                        <span class="align-self-center ml-2">
+                                                            <span class="form-check">
+                                                                <input type="checkbox" name="photo-clear" id="photo-clear_id" class="form-check-input">
+                                                                <label class="form-check-label mb-0" for="photo-clear_id">Wyczyść</label>
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div>
-                                                <input type="file" name="photo" class="form-control" accept="image/png, image/jpeg" id="id_photo">
+                                                <div>
+                                                    <input type="file" name="photo" class="form-control" accept="image/png, image/jpeg" id="id_photo">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </form>
-                    `;
-                }
-            },
-            error: (jqXHR, textStatus, errorThrown) => {
-                console.log(jqXHR, textStatus, errorThrown);
-            },
-        })
+                            </form>
+                        `;
+                    }
+                },
+                error: (jqXHR, textStatus, errorThrown) => {
+                    console.log(jqXHR, textStatus, errorThrown);
+                },
+            });
+
+            document.getElementById('addToShoppingCartBtn')?.addEventListener('click', addToShoppingCart);
+        })();
     </script>
 {% endblock %}
