@@ -1,7 +1,6 @@
 from django.db.models import Q, Sum
 
 import graphene
-from graphene_django.debug import DjangoDebug
 
 from API.models import ProductCategory
 from API.models import Product
@@ -16,6 +15,8 @@ from API.types import MonthlySalesAndProfitsType
 from API.types import CountrySalesAndProfitsType
 from API.types import DiscountCouponType
 
+from datetime import datetime
+
 
 def get_date_range_product_filter_from_kwargs(**kwargs):
     date_from_limit = kwargs.get("date_from", None)
@@ -23,9 +24,15 @@ def get_date_range_product_filter_from_kwargs(**kwargs):
     date_filter_query = Q()
 
     if date_from_limit:
-        date_filter_query.add(Q(orderproductlistitem__order__order_date__gte=date_from_limit), Q.AND)
+        date_filter_query.add(
+            Q(orderproductlistitem__order__order_date__gte=datetime.strptime(date_from_limit, '%Y-%m-%d %H:%M:%S')),
+            Q.AND
+        )
     if date_to_limit:
-        date_filter_query.add(Q(orderproductlistitem__order__order_date__lte=date_to_limit), Q.AND)
+        date_filter_query.add(
+            Q(orderproductlistitem__order__order_date__lte=datetime.strptime(date_to_limit, '%Y-%m-%d %H:%M:%S')),
+            Q.AND
+        )
 
     return date_filter_query
 
@@ -64,6 +71,7 @@ class APIQuery(graphene.ObjectType):
                                              date_from=graphene.String(required=False),
                                              date_to=graphene.String(required=False))
     all_orders = graphene.List(OrderType,
+                               limit=graphene.Int(required=False),
                                date_from=graphene.String(required=False),
                                date_to=graphene.String(required=False)
                                )
@@ -132,16 +140,21 @@ class APIQuery(graphene.ObjectType):
     def resolve_all_orders(self, info, **kwargs):
         date_from_limit = kwargs.get("date_from", None)
         date_to_limit = kwargs.get("date_to", None)
+        limit = kwargs.get("limit", 10)
         date_filter_query = Q()
 
-        if date_from_limit:
-            date_filter_query.add(Q(order_date__gte=date_from_limit), Q.AND)
-        if date_to_limit:
-            date_filter_query.add(Q(order_date__lte=date_to_limit), Q.AND)
-        if date_filter_query:
-            return Order.objects.filter(date_filter_query)
+        if limit < 1:
+            limit = 1
 
-        return Order.objects.all()
+        if date_from_limit:
+            # 2023-05-01 12:00:00
+            date_filter_query.add(Q(order_date__gte=datetime.strptime(date_from_limit, '%Y-%m-%d %H:%M:%S')), Q.AND)
+        if date_to_limit:
+            date_filter_query.add(Q(order_date__lte=datetime.strptime(date_to_limit, '%Y-%m-%d %H:%M:%S')), Q.AND)
+        if date_filter_query:
+            return Order.objects.filter(date_filter_query).order_by('-order_date')[:limit]
+
+        return Order.objects.all().order_by('-order_date')[:limit]
 
     def resolve_order(self, info, id):
         try:

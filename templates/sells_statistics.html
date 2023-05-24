@@ -260,6 +260,33 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent orders</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <div class="table-responsive">
+                        <table class="table border table-striped mg-b-0" id="recentOrders">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Total Price</th>
+                                    <th>Discount</th>
+                                    <th>Final price</th>
+                                    <th>Status</th>
+                                    <th>Order date</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 {% block custom_scripts %}
     <!-- INTERNAL ion.rangeSlider.min js -->
@@ -555,9 +582,23 @@
                   }
                 }
             `;
+            const recentOrdersQuery = `
+                {
+                  allOrders(limit: 10){
+                    id
+                    fullPrice
+                    finalPrice
+                    orderDate
+                    statusName
+                    discount
+                    client{
+                      email
+                    }
+                  }
+                }
+            `;
 
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: monthlySalesQuery}), (data) => {
-                console.log(data.data.monthlySalesAndProfits);
                 const monthlySales = data.data.monthlySalesAndProfits;
                 if (monthlySales.length > 0) {
                     for (let i = 0; i < monthlySales.length; i++) {
@@ -565,7 +606,6 @@
                         monthlySellsChart.data.datasets[1].data[monthlySales[i].month - 1] = Number(monthlySales[i].profits) / 1000;
                     }
                     monthlySellsChart.update();
-                    console.log(monthlySellsChart.data.datasets);
                 }
             });
             getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topSellersQuery}), (data) => {
@@ -645,7 +685,7 @@
                         if (i < 10){
                             const currentRowChildren = topCountriesTableRows[i].children;
                             currentRowChildren[1].innerHTML = countryCodesFormatter.of(countryData[i].country);
-                            currentRowChildren[2].innerHTML = bigNumbersFormatter.format(countryData[i].sales) + ' PLN';
+                            currentRowChildren[2].innerHTML = bigNumbersFormatter.format(countryData[i].sales);
                             currentRowChildren[3].innerHTML = bigNumbersFormatter.format(countryData[i].profits) + ' PLN';
                         }
                     }
@@ -681,6 +721,27 @@
                         }
                     });
                 });
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: recentOrdersQuery}), (data) => {
+                const recentOrdersTable = document.querySelector('table#recentOrders>tbody');
+                const recentOrders = data.data.allOrders;
+                const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
+
+                for (let i = 0; i < recentOrders.length; i++) {
+                    recentOrdersTable.appendChild($(
+                        `
+                            <tr>
+                                <td>${recentOrders[i].id}</td>
+                                <td>${recentOrders[i].client.email}</td>
+                                <td>${bigNumbersFormatter.format(recentOrders[i].fullPrice)} PLN</td>
+                                <td>${(recentOrders[i].discount * 100).toFixed(0)}%</td>
+                                <td>${bigNumbersFormatter.format(recentOrders[i].finalPrice)} PLN</td>
+                                <td>${recentOrders[i].statusName}</td>
+                                <td>${moment(recentOrders[i].orderDate).format('DD-MM-YYYY hh:mm:ss')}</td>
+                            </tr>
+                        `
+                    )[0]);
+                }
             });
         })();
     </script>

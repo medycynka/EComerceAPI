@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+
 import graphene
 from graphene_django import DjangoObjectType
 
@@ -9,6 +11,12 @@ from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
 from API.models import DiscountCoupon
+
+
+class UserType(DjangoObjectType):
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'username', 'email', 'first_name', 'last_name')
 
 
 class ProductCategoryType(DjangoObjectType):
@@ -55,6 +63,7 @@ class OrderType(DjangoObjectType):
         fields = ('id', 'client', 'order_address', 'order_date', 'payment_deadline', 'full_price', 'status', 'discount')
         convert_choices_to_enum = False
 
+    status_name = graphene.String()
     products_list = graphene.List(OrderProductListItemType)
     has_discount = graphene.Boolean()
     final_price = graphene.Decimal()

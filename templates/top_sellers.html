@@ -69,7 +69,7 @@
                             <div class="form-group">
                                 <label class="form-label">&emsp;</label>
                                 <div class="input-group">
-                                    <button type="button" class="btn btn-primary" onclick="filterProducts()" style="width: 100%;"><i class="fa fa-search"></i>&emsp;Apply filters</button>
+                                    <button type="button" class="btn btn-primary" id="filterProductsBtn" style="width: 100%;"><i class="fa fa-search"></i>&emsp;Apply filters</button>
                                 </div>
                             </div>
                         </div>
@@ -104,65 +104,69 @@
     <script src="{% static 'assets/plugins/datatable/moment/moment.min.js' %}"></script>
 
     <script>
-        const tableBodyContainer = $("table.table>tbody");
-        const limitSelect = $('select#resultsLimitSelect');
-        const fromDateFilter = $('#fromDateFilter');
-        const toDateFilter = $('#toDateFilter');
+        (function(){
+            const tableBodyContainer = $("table.table>tbody");
+            const limitSelect = $('select#resultsLimitSelect');
+            const fromDateFilter = $('#fromDateFilter');
+            const toDateFilter = $('#toDateFilter');
 
-        limitSelect.select2({
-            minimumResultsForSearch: Infinity,
-        });
+            limitSelect.select2({
+                minimumResultsForSearch: Infinity,
+            });
 
-        function getAllFiltersData() {
-            const fromDate = fromDateFilter[0].value;
-            const toDate = toDateFilter[0].value;
+            function getAllFiltersData() {
+                const fromDate = fromDateFilter[0].value;
+                const toDate = toDateFilter[0].value;
 
-            return {
-                'date_from': fromDate !== '' ? moment(fromDate).format('DD-MM-YYYY hh:mm:ss') : '',
-                'date_to': toDate !== '' ? moment(toDate).format('DD-MM-YYYY hh:mm:ss') : '',
-                'limit': limitSelect[0].value,
+                return {
+                    'date_from': fromDate !== '' ? moment(fromDate).format('DD-MM-YYYY hh:mm:ss') : '',
+                    'date_to': toDate !== '' ? moment(toDate).format('DD-MM-YYYY hh:mm:ss') : '',
+                    'limit': limitSelect[0].value,
+                }
             }
-        }
 
-        function filterProducts(){
-            const filterData = getAllFiltersData();
-            reloadProductsList(filterData);
+            function filterProducts(){
+                const filterData = getAllFiltersData();
+                reloadProductsList(filterData);
 
-            return false
-        }
+                return false
+            }
 
-        function reloadProductsList(filters) {
-            $.ajax({
-                url: "{% url 'api_products_top_sellers_list' %}",
-                data: filters,
-                type: 'GET',
-                headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                contentType : 'application/json',
-                processData : true,
-                success: (data, textStatus, jqXHR) => {
-                    const itemsCount = data.results.length;
-                    const detailUrl = '{% url 'products_list' %}';
-                    tableBodyContainer.empty();
+            function reloadProductsList(filters) {
+                $.ajax({
+                    url: "{% url 'api_products_stats-top_sellers' %}",   // or api_products_stats-list
+                    data: filters,
+                    type: 'GET',
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : 'application/json',
+                    processData : true,
+                    success: (data, textStatus, jqXHR) => {
+                        const itemsCount = data.results.length;
+                        const detailUrl = '{% url 'products_list' %}';
+                        tableBodyContainer.empty();
 
-                    for (let i = 0; i < itemsCount; i++) {
-                        tableBodyContainer.append($(
-                            `<tr>
-                                <td>${data.results[i].name}</td>
-                                <td>${data.results[i].category.name}</td>
-                                <td>${data.results[i].price} PLN</td>
-                                <td>${data.results[i].sells_count}</td>
-                                <td>${(data.results[i].price * data.results[i].sells_count).toFixed(2)} PLN</td>
-                                <td><a href="${detailUrl}${data.results[i].id}/"><i class="zmdi zmdi-globe"></i></a></td>
-                            </tr>`
-                        ));
-                    }
-                },
-                error: (jqXHR, textStatus, errorThrown) => {
-                    console.log(jqXHR, textStatus, errorThrown);
-                },
-            })
-        }
+                        for (let i = 0; i < itemsCount; i++) {
+                            tableBodyContainer.append($(
+                                `<tr>
+                                    <td>${data.results[i].name}</td>
+                                    <td>${data.results[i].category.name}</td>
+                                    <td>${data.results[i].price} PLN</td>
+                                    <td>${data.results[i].sells_count}</td>
+                                    <td>${(data.results[i].price * data.results[i].sells_count).toFixed(2)} PLN</td>
+                                    <td><a href="${detailUrl}${data.results[i].id}/"><i class="zmdi zmdi-globe"></i></a></td>
+                                </tr>`
+                            ));
+                        }
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        console.log(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            }
 
-        reloadProductsList(null);
+            document.getElementById('filterProductsBtn')?.addEventListener('click', filterProducts);
+
+            reloadProductsList(null);
+        })();
     </script>
 {% endblock %}

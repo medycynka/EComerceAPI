@@ -7,9 +7,9 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAdminUser
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import GenericViewSet
+from rest_framework import mixins
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -33,12 +33,6 @@ from API.serializers import DiscountCouponCodesSerializer
 from API.serializers import OrderStatusExtraExplanation
 from API.filters import ProductFilter
 from API.filters import ProductStatisticsFilter
-# from API.filters import ProductTopSellersFilter
-# from API.filters import ProductLeastSellersFilter
-# from API.filters import ProductTopProfitableFilter
-# from API.filters import ProductLeastProfitableFilter
-
-import datetime
 
 
 class ProductModelViewSet(ModelViewSet):
@@ -62,11 +56,11 @@ class ProductModelViewSet(ModelViewSet):
 
 class ProductListCreateAPIView(ListCreateAPIView):
     serializer_class = ProductManageSerializer
-    queryset = Product.objects.select_related('category').all().order_by('-pk')
+    queryset = Product.objects.all().order_by('-pk')
     permission_classes = [AuthenticatedSellersOnly]
 
 
-class ProductStatisticsListAPIView(ReadOnlyModelViewSet):
+class ProductStatisticsListAPIView(mixins.ListModelMixin, GenericViewSet):
     serializer_class = ProductTopLeastSellersSerializer
     queryset = Product.objects.none()
     filterset_class = ProductStatisticsFilter
@@ -86,17 +80,6 @@ class ProductStatisticsListAPIView(ReadOnlyModelViewSet):
         elif self.action == 'least_profitable':
             return Product.objects.least_profitable(self.request.user)
         return Product.objects.top_sellers(self.request.user)
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
     @action(methods=['get'], detail=False, url_path='top-sellers', url_name='top_sellers',
             name="Top selling products", description="List of products from least profitable to most")
