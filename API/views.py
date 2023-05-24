@@ -7,6 +7,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAdminUser
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
@@ -16,10 +17,13 @@ from rest_framework.decorators import action
 
 from API.api_permissions import AuthenticatedClientsOnly
 from API.api_permissions import AuthenticatedSellersOnly
+from API.models import ProductCategory
 from API.models import Product
 from API.models import Order
 from API.models import Address
 from API.models import DiscountCoupon
+from API.serializers import ProductCategorySerializer
+from API.serializers import ProductCategoryManageSerializer
 from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
 from API.serializers import ProductTopLeastSellersSerializer
@@ -33,6 +37,24 @@ from API.serializers import DiscountCouponCodesSerializer
 from API.serializers import OrderStatusExtraExplanation
 from API.filters import ProductFilter
 from API.filters import ProductStatisticsFilter
+
+
+class ProductCategoryModelViewSet(ModelViewSet):
+    serializer_class = ProductCategoryManageSerializer
+    queryset = ProductCategory.objects.root_nodes().prefetch_related('children')
+    permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return ProductCategorySerializer
+        return self.serializer_class
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
 
 class ProductModelViewSet(ModelViewSet):

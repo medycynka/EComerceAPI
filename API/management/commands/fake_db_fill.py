@@ -35,7 +35,9 @@ class Command(BaseCommand):
         if options['categories']:
             self.stdout.write(self.style.SUCCESS(f'Generating {batch_size} test categories...'))
             factories.CategoryFactory.create_batch(batch_size)
-            self.stdout.write(self.style.SUCCESS(f'Successfully created {batch_size} test categories.'))
+            factories.CategoryLevelOneFactory.create_batch(batch_size // 2)
+            factories.CategoryLevelTwoFactory.create_batch(batch_size // 4)
+            self.stdout.write(self.style.SUCCESS(f'Successfully created {int(batch_size * 1.75)} test categories.'))
             created_anything = True
 
         if options['products']:

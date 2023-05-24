@@ -15,6 +15,14 @@ from API.models import OrderProductListItem
 from API.models import DiscountCoupon
 
 
+# region Utility serializers
+class RecursiveSerializer(serializers.Serializer):
+    def to_representation(self, value):
+        serializer = self.parent.parent.__class__(value, context=self.context)
+        return serializer.data
+# endregion
+
+
 # region Models Serializers
 class UserSerializer(ModelSerializer):
     class Meta:
@@ -49,10 +57,21 @@ class UserCreateSerializer(ModelSerializer):
 
 
 class ProductCategorySerializer(ModelSerializer):
+    children = RecursiveSerializer(many=True)
+
     class Meta:
         model = ProductCategory
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'parent', 'children')
         read_only_fields = fields
+
+
+class ProductCategoryManageSerializer(ModelSerializer):
+    parent = serializers.PrimaryKeyRelatedField(queryset=ProductCategory.objects.all())
+
+    class Meta:
+        model = ProductCategory
+        fields = ('id', 'name', 'parent')
+        read_only_fields = ('id',)
 
 
 class ProductSerializer(ModelSerializer):

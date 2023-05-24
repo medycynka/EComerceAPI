@@ -91,6 +91,15 @@ class CategoryFactory(DjangoModelFactory):
     name = factory.LazyFunction(lambda: fake.sentence(nb_words=2))
 
 
+class CategoryLevelOneFactory(CategoryFactory):
+    CATEGORY_TREE_LEVEL = 0
+    parent = factory.Iterator(ProductCategory.objects.filter(level=CATEGORY_TREE_LEVEL))
+
+
+class CategoryLevelTwoFactory(CategoryLevelOneFactory):
+    CATEGORY_TREE_LEVEL = 1
+
+
 class ProductFactory(DjangoModelFactory):
     """:model:`API.Product` factory."""
 

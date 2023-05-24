@@ -14,23 +14,28 @@ from django.db.models.functions import ExtractYear
 
 from django_countries.fields import CountryField
 
+from mptt.models import MPTTModel, TreeForeignKey
+
 from PIL import Image
 import os
 from io import BytesIO
 from datetime import timedelta, datetime
 from decimal import Decimal
-import operator
 
 # Create your models here.
 
 
-class ProductCategory(models.Model):
+class ProductCategory(MPTTModel):
     name = models.CharField(verbose_name=_("Category name"), max_length=128)
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
     class Meta:
         db_table = 'API_product_category'
         verbose_name = 'product category'
         verbose_name_plural = 'product categories'
+
+    class MPTTMeta:
+        order_insertion_by = ['name']
 
     def __str__(self):
         return self.name
