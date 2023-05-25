@@ -43,6 +43,7 @@ class ProductCategoryModelViewSet(ModelViewSet):
     serializer_class = ProductCategoryManageSerializer
     queryset = ProductCategory.objects.root_nodes().prefetch_related('children')
     permission_classes = [IsAdminUser]
+    pagination_class = None
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:

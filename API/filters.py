@@ -11,7 +11,7 @@ from API.models import Product
 
 class ProductFilter(filters.FilterSet):
     name = django_filters.CharFilter(lookup_expr='icontains')
-    category = django_filters.ModelChoiceFilter(queryset=ProductCategory.objects.all())
+    category = django_filters.ModelMultipleChoiceFilter(queryset=ProductCategory.objects.all())
     description = django_filters.CharFilter(lookup_expr='icontains')
     price = django_filters.NumberFilter()
     price_range = django_filters.RangeFilter(field_name='price')

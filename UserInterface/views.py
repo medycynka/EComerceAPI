@@ -64,7 +64,6 @@ class ProductListTemplateView(TemplateView):
 
         filter_class = ProductFilter()
         context['order_options'] = filter_class.filters['order'].field.choices
-        context['category_options'] = ProductCategory.objects.all()
 
         return context
 
