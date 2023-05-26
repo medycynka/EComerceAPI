@@ -1,5 +1,8 @@
 from django.contrib import admin
 
+from mptt.admin import MPTTModelAdmin
+from mptt.admin import TreeRelatedFieldListFilter
+
 from API.models import ProductCategory
 from API.models import Product
 from API.models import Address
@@ -10,9 +13,12 @@ import random
 
 
 @admin.register(ProductCategory)
-class ProductCategoryAdmin(admin.ModelAdmin):
+class ProductCategoryAdmin(MPTTModelAdmin):
     list_display = ('id', 'name',)
-    list_filter = ('name',)
+    list_filter = (
+        ('parent', TreeRelatedFieldListFilter),
+        'name'
+    )
     search_fields = ('name',)
 
 

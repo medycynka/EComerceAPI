@@ -6,6 +6,9 @@
         .select2{
             width: 100% !important;
         }
+        #categoryTree ul:hover, #categoryTree li:hover{
+            color: white;
+        }
     </style>
 {% endblock %}
 {% block page_header_title %}
@@ -48,15 +51,14 @@
                         </div>
                         <div class="card-body">
                             <div class="form-group mt-3">
-                                <label class="form-label">Category</label>
-                                <select name="beast" id="select-category" class="form-control form-select select2">
-                                    <option value="" selected>---------</option>
-                                    {% for category_option in category_options %}
-                                        <option value="{{ category_option.pk }}">{{ category_option.name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label">Categories</label>
+                                <div class="input-group" style="margin-top: 10px; margin-bottom: 5px;">
+                                    <input type="text" class="form-control" id="categoryFilter" placeholder="Category search...">
+                                    <span class="input-group-text btn btn-primary" id="categoryFilterBtn"><i class="fa fa-caret-square-o-down"></i></span>
+                                </div>
+                                <div id="categoryTree"></div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mt-3">
                                 <label class="form-label">Order</label>
                                 <select name="beast" id="select-order" class="form-control form-select select2">
                                     {% for order_option in order_options %}
@@ -112,12 +114,16 @@
     <!-- INTERNAL ion.rangeSlider.min js -->
     <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
 
+    <!-- -->
+    <script src="{% static 'assets/plugins/bootstrap-treeview-1.2.0/src/js/bootstrap-treeview.min.js' %}"></script>
+
     <script>
         (function (){
             const nextPageBtn = $('.page-next>.page-link');
             const prevPageBtn = $('.page-prev>.page-link');
             const productsContainer = $('#productsContainer');
             const categorySelect = $('#select-category');
+            const categoryTree = $('#categoryTree');
             const orderSelect = $('#select-order');
             const nameFilter = $('#nameFilter');
             const descriptionFilter = $('#descriptionFilter');
@@ -132,13 +138,14 @@
                 sessionStorage.removeItem('shopping-cart')
             }
 
-            let addToShoppingCart = (name, price, productId) => {
+            const addToShoppingCart = (name, price, productId, stock) => {
                 if (canBuyProducts && !shoppingCartIds.has(productId)) {
                     shoppingCartIds.add(productId);
                     shoppingCart.push({
-                       'id': productId,
+                        'id': productId,
                         'name': name,
                         'price': price,
+                        'stock': stock,
                     });
                     sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
                     Growl.growl({
@@ -148,6 +155,54 @@
                         message: `Dodano ${name} do Twojego koszyka`,
                     });
                 }
+            };
+            const getAPIData = (
+                apiUrl,
+                method,
+                data=null,
+                onSuccess=(data, textStatus, jqXHR)=>{console.log(data, textStatus, jqXHR)},
+                onError=(jqXHR, textStatus, errorThrown)=>{console.log(jqXHR, textStatus, errorThrown)}
+            ) => {
+                $.ajax({
+                    url: apiUrl,
+                    data: data,
+                    type: method,
+                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                    contentType : 'application/json',
+                    processData : true,
+                    success: (data, textStatus, jqXHR) => {
+                        onSuccess(data, textStatus, jqXHR);
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => {
+                        onError(jqXHR, textStatus, errorThrown);
+                    },
+                })
+            };
+            const formatCategory = (category) => {
+                let categoryNode = {
+                    text: category.name,
+                    customId: `${category.id}`
+                };
+
+                if (category.children.length > 0) {
+                    categoryNode['nodes'] = [];
+                    for (let i = 0; i < category.children.length; i++) {
+                        categoryNode['nodes'].push(formatCategory(category.children[i]));
+                    }
+                }
+
+                return categoryNode;
+            };
+            const getFullCategoryList = (node) => {
+                const ids = [node.customId];
+
+                if (node.nodes !== undefined && node.nodes.length > 0) {
+                    for (let i = 0; i < node.nodes.length; i++) {
+                        ids.push(...getFullCategoryList(node.nodes[i]));
+                    }
+                }
+
+                return ids;
             };
 
             categorySelect.select2({});
@@ -164,27 +219,27 @@
                 postfix: ' PLN'
             });
 
-            function getAllFiltersData() {
+            const getAllFiltersData = () => {
                 const priceRange = priceRangeFilter[0].value.split(';');
 
-                return {
-                    'category': categorySelect[0].value,
-                    'order': orderSelect[0].value,
-                    'name': nameFilter[0].value,
-                    'description': descriptionFilter[0].value,
-                    'price_range_min': priceRange[0],
-                    'price_range_max': priceRange[1],
-                }
-            }
+                return new URLSearchParams([
+                    ...categoryTree.treeview('getSelected', null).map(el => ['category', el.customId]),
+                    ['order', orderSelect[0].value],
+                    ['name', nameFilter[0].value],
+                    ['description', descriptionFilter[0].value],
+                    ['price_range_min', priceRange[0]],
+                    ['price_range_max', priceRange[1]],
+                ]).toString();
+            };
+            window.serializeFilters = getAllFiltersData;
 
-            function filterProducts(){
+            const filterProducts = () => {
                 const filterData = getAllFiltersData();
                 reloadProductsList(null, filterData);
 
                 return false
-            }
-
-            function generateProductsList(products) {
+            };
+            const generateProductsList = (products) => {
                 const itemsCount = products.length;
                 const currentUrl = window.location.href;
                 productsContainer.empty();
@@ -213,7 +268,7 @@
                                     </div>
                                     <ul class="icons">
                                         <li><a href="${currentUrl + products[i].id}/" data-tip="Quick View"><i class="fe fe-eye "></i></a></li>
-                                        <li><a href="javascript:void(0)" id="shoppingCartAdder" data-product-cart-data="${products[i].name};${products[i].price};${products[i].id}" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
+                                        <li><a href="javascript:void(0)" id="shoppingCartAdder" data-product-cart-data="${products[i].name};${products[i].price};${products[i].id};${products[i].stock}" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -226,56 +281,78 @@
                         addToShoppingCart(...this.dataset['productCartData'].split(';'));
                     })
                 })
-            }
+            };
+            const reloadProductsList = (apiUrl, filters) => {
+                getAPIData((apiUrl || `{% url 'api_products-list' %}`) + `?${filters}`, 'GET', null, (data) => {
+                    if (data.previous) {
+                        prevPageBtn.parent().removeClass('disabled');
+                        prevPageBtn.attr('data-prev-page', data.previous);
+                        prevPageBtn.on('click', function () {
+                            reloadProductsList(this.dataset['prevPage'], null);
+                            $("html").animate({
+                                scrollTop: 0
+                            }, 0);
+                        });
+                    } else {
+                        !prevPageBtn.parent().hasClass('disabled') && prevPageBtn.parent().addClass('disabled');
+                        prevPageBtn.off('click');
+                    }
+                    if (data.next) {
+                        nextPageBtn.parent().removeClass('disabled');
+                        nextPageBtn.attr('data-next-page', data.next);
+                        nextPageBtn.on('click', function () {
+                            reloadProductsList(this.dataset['nextPage'], null);
+                            $("html").animate({
+                                scrollTop: 0
+                            }, 0);
+                        });
+                    } else {
+                        !nextPageBtn.parent().hasClass('disabled') && nextPageBtn.parent().addClass('disabled');
+                        nextPageBtn.off('click');
+                    }
 
-            function reloadProductsList(apiUrl, filters) {
-                $.ajax({
-                    url: apiUrl || "{% url 'api_products-list' %}",
-                    data: filters,
-                    type: 'GET',
-                    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
-                    contentType : 'application/json',
-                    processData : true,
-                    success: (data, textStatus, jqXHR) => {
-                        if (data.previous) {
-                            prevPageBtn.parent().removeClass('disabled');
-                            prevPageBtn.attr('data-prev-page', data.previous);
-                            prevPageBtn.on('click', function () {
-                                reloadProductsList(this.dataset['prevPage'], null);
-                                $("html").animate({
-                                    scrollTop: 0
-                                }, 0);
-                            });
-                        } else {
-                            !prevPageBtn.parent().hasClass('disabled') && prevPageBtn.parent().addClass('disabled');
-                            prevPageBtn.off('click');
-                        }
-                        if (data.next) {
-                            nextPageBtn.parent().removeClass('disabled');
-                            nextPageBtn.attr('data-next-page', data.next);
-                            nextPageBtn.on('click', function () {
-                                reloadProductsList(this.dataset['nextPage'], null);
-                                $("html").animate({
-                                    scrollTop: 0
-                                }, 0);
-                            });
-                        } else {
-                            !nextPageBtn.parent().hasClass('disabled') && nextPageBtn.parent().addClass('disabled');
-                            nextPageBtn.off('click');
-                        }
-
-                        generateProductsList(data.results);
-                    },
-                    error: (jqXHR, textStatus, errorThrown) => {
-                        console.log(jqXHR, textStatus, errorThrown);
-                    },
-                })
-            }
+                    generateProductsList(data.results);
+                }, (jqXHR, textStatus, errorThrown) => {console.log(jqXHR, textStatus, errorThrown)});
+            };
 
             document.querySelectorAll('.filter-products').forEach((el) => {
                 el.addEventListener('click', filterProducts);
             });
 
+            getAPIData('{% url "api_categories-list" %}', 'GET', null, (data) => {
+                let tree = [{
+                    text: 'Categories',
+                    customId: "-1",
+                    nodes: [],
+                    state: {
+                        expanded: false,
+                    },
+                }];
+
+                for (let i = 0; i < data.length; i++) {
+                    tree[0].nodes.push(formatCategory(data[i]));
+                }
+
+                console.log(tree);
+
+                categoryTree.treeview({
+                    data: tree,
+                    levels: 0,
+                    onhoverColor: '#233ac5',
+                    selectedBackColor: '#5161c1',
+                    searchResultColor: '#6259ca',
+                    multiSelect: true,
+                    onNodeSelected: function (event, node) {
+                        if (node.text === 'Categories' && node.nodeId === 0) {
+                            categoryTree.treeview('unselectNode', [node.nodeId, {silent: true}]);
+                        } else {
+                            //const categoriesInNode = getFullCategoryList(node);
+                            //console.log(categoriesInNode);
+                            //console.log(categoryTree.treeview('getSelected', null).map(el => el.customId));
+                        }
+                    },
+                });
+            });
             reloadProductsList(null, null);
         })();
     </script>

@@ -284,7 +284,7 @@
                                 <button type="button" class="counter-minus btn btn-default lh-2 shadow-none">
                                     <i class="fe fe-minus"></i>
                                 </button>
-                                <input type="text" value="1" class="qty">
+                                <input type="text" value="1" class="qty" max="${shoppingCart[i].stock}">
                                 <button type="button" class="counter-plus btn btn-default lh-2 shadow-none">
                                     <i class="fe fe-plus "></i>
                                 </button>
@@ -303,7 +303,7 @@
             $('.counter-plus').on('click', function () {
                 const quantityHolder = $(this).closest('div').find('.qty');
                 const currentVal = parseInt(quantityHolder.val());
-                if (!isNaN(currentVal)) {
+                if (!isNaN(currentVal) && parseInt(quantityHolder.attr('max')) > currentVal) {
                     quantityHolder.val(currentVal + 1);
 
                     const rowParentEl = $(this).closest('tr');
@@ -325,8 +325,17 @@
                 }
             });
             $('input.qty').on('input', function () {
+                let currVal = parseInt(this.value);
+                const stock = $(this).attr('max');
+                if (currVal < 0){
+                    this.value = '0';
+                    currVal = 0;
+                } else if (currVal > parseInt(stock)) {
+                    this.value = stock;
+                    currVal = parseInt(stock);
+                }
                 const rowParentEl = $(this).closest('tr');
-                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * parseInt(this.value)).toFixed(2);
+                rowParentEl.find('#fullPrice')[0].innerHTML = (Number(rowParentEl.find('#singletonPrice')[0].innerHTML) * currVal).toFixed(2);
 
                 updateFullPrice();
             });

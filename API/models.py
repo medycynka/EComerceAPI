@@ -14,30 +14,34 @@ from django.db.models.functions import ExtractYear
 
 from django_countries.fields import CountryField
 
+from mptt.models import MPTTModel, TreeForeignKey
+
 from PIL import Image
 import os
 from io import BytesIO
 from datetime import timedelta, datetime
 from decimal import Decimal
-import operator
-
-# Create your models here.
 
 
-class ProductCategory(models.Model):
+# region Products
+class ProductCategory(MPTTModel):
     name = models.CharField(verbose_name=_("Category name"), max_length=128)
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
 
     class Meta:
         db_table = 'API_product_category'
         verbose_name = 'product category'
         verbose_name_plural = 'product categories'
 
+    class MPTTMeta:
+        order_insertion_by = ['name']
+
     def __str__(self):
         return self.name
 
 
 class ProductManager(models.Manager):
-    def products_by_seller(self, seller: User, filter_q: Q = None):
+    def products_by_seller(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         :param seller: user with 'seller' role
         :param filter_q: additional filtering expression
@@ -52,7 +56,7 @@ class ProductManager(models.Manager):
 
         return q
 
-    def counted_sales(self, seller: User, filter_q: Q = None):
+    def counted_sales(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products annotated with the total number of copies sold
         :param seller: user model representing 'seller'
@@ -70,7 +74,7 @@ class ProductManager(models.Manager):
             )
         )
 
-    def top_sellers(self, seller: User, filter_q: Q = None):
+    def top_sellers(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from most to least frequently purchased
         :param seller: user model representing 'seller'
@@ -80,7 +84,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_sales(seller, filter_q).order_by('-sells_count')
 
-    def least_sellers(self, seller: User, filter_q: Q = None):
+    def least_sellers(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from least to most frequently purchased
         :param seller: user model representing 'seller'
@@ -90,7 +94,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_sales(seller, filter_q).order_by('sells_count')
 
-    def counted_profits(self, seller: User, filter_q: Q = None):
+    def counted_profits(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products annotated with the total profit
         :param seller: user model representing 'seller'
@@ -106,7 +110,7 @@ class ProductManager(models.Manager):
             )
         )
 
-    def most_profitable(self, seller: User, filter_q: Q = None):
+    def most_profitable(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from most to least profitable
         :param seller: user model representing 'seller'
@@ -116,7 +120,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_profits(seller, filter_q).order_by('-total_profit')
 
-    def least_profitable(self, seller: User, filter_q: Q = None):
+    def least_profitable(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from least to most profitable
         :param seller: user model representing 'seller'
@@ -125,6 +129,18 @@ class ProductManager(models.Manager):
         :return: products in order from least to most profitable
         """
         return self.counted_profits(seller, filter_q).order_by('total_profit')
+
+    def available(self) -> QuerySet:
+        """
+        :return: Available products query with stock > 0
+        """
+        return self.get_queryset().filter(stock__gt=0)
+
+    def out_of_stock(self) -> QuerySet:
+        """
+        :return: Not available products query with stock == 0
+        """
+        return self.get_queryset().filter(stock=0)
 
 
 class Product(models.Model):
@@ -136,6 +152,7 @@ class Product(models.Model):
     photo = models.ImageField(verbose_name=_("Product photo"), upload_to='photos')
     thumbnail = models.ImageField(verbose_name=_("Product thumbnail"), upload_to='thumbnails', blank=True, default=None)
     seller = models.ForeignKey(User, verbose_name=_("Product seller"), null=True, on_delete=models.CASCADE)
+    stock = models.PositiveIntegerField(verbose_name=_("Stock"), default=0)
 
     objects = ProductManager()
 
@@ -150,36 +167,38 @@ class Product(models.Model):
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.create_thumbnail()
 
-        super().save(force_insert=force_insert, force_update=force_update, using=using,
-                                  update_fields=update_fields)
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
     def create_thumbnail(self):
         """
         Create a thumbnail image from provided `photo` file
         """
 
-        thumbnail = Image.open(self.photo)
-        thumbnail.thumbnail(settings.THUMBNAIL_SIZE, Image.ANTIALIAS)
-
         thumbnail_name, thumbnail_extension = os.path.splitext(self.photo.name)
         thumbnail_extension = thumbnail_extension.lower()
         thumb_filename = thumbnail_name + '_thumbnail' + thumbnail_extension
 
-        if thumbnail_extension in ['.jpg', '.jpeg']:
-            file_type = 'JPEG'
-        elif thumbnail_extension == '.png':
-            file_type = 'PNG'
-        else:
-            raise ValueError("Wrong product photo image! Accepted extensions are: jpg, jpeg or png!")
+        if self.thumbnail.name != thumb_filename:
+            thumbnail = Image.open(self.photo)
+            thumbnail.thumbnail(settings.THUMBNAIL_SIZE, Image.ANTIALIAS)
 
-        temp_thumbnail = BytesIO()
-        thumbnail.save(temp_thumbnail, file_type)
-        temp_thumbnail.seek(0)
+            if thumbnail_extension in ['.jpg', '.jpeg']:
+                file_type = 'JPEG'
+            elif thumbnail_extension == '.png':
+                file_type = 'PNG'
+            else:
+                raise ValueError("Wrong product photo image! Accepted extensions are: jpg, jpeg or png!")
 
-        self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
-        temp_thumbnail.close()
+            temp_thumbnail = BytesIO()
+            thumbnail.save(temp_thumbnail, file_type)
+            temp_thumbnail.seek(0)
+
+            self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
+            temp_thumbnail.close()
+# endregion
 
 
+# region Orders
 class Address(models.Model):
     class PolishStates(models.IntegerChoices):
         """
@@ -251,34 +270,21 @@ class OrderManager(models.Manager):
             user_q = Q(client=user)
         return user_q
 
-    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str, order_by: str = None) -> list:
+    def __annotate_sales_and_profits(self, queryset: QuerySet, group_key: str) -> QuerySet:
         """
         Group queryset by `group_key` and annotate corresponding groups its sales and profits
         :param queryset: orders queryset
         :param group_key: grouping key ex. 'months'
-        :return: grouped queryset as list with annotated total sales and profits
+        :return: grouped queryset with annotated total sales and profits
         """
-        sales = queryset.values(group_key).annotate(
-            sales=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField()))
-        ).order_by(group_key)
-        profits = queryset.values(group_key).annotate(
-            profits=Coalesce(models.Sum('full_price'), Cast(0, models.DecimalField(decimal_places=2, max_digits=24)))
-        ).order_by(group_key)
-        sales_and_profits = [{**sale, **profit} for sale, profit in zip(sales, profits)]
+        return queryset.values(group_key).annotate(
+            sales=models.Sum('orderproductlistitem__quantity'),
+            profits=models.Sum(
+                models.F('orderproductlistitem__quantity') * models.F('orderproductlistitem__product__price')
+            )
+        )
 
-        if len(sales_and_profits) and order_by:
-            descending = order_by[0] == '-'
-
-            if descending:
-                order_by = order_by[1:]
-
-            if isinstance(sales_and_profits[0], dict):
-                sales_and_profits.sort(key=operator.itemgetter(order_by), reverse=descending)
-            else:
-                sales_and_profits.sort(key=operator.attrgetter(order_by), reverse=descending)
-        return sales_and_profits
-
-    def sales_by_day(self, user: User, date: datetime) -> list:
+    def sales_by_day(self, user: User, date: datetime) -> QuerySet:
         """
         :param user: user model
         :param date: specific day in which we want to count sales and profits, ex 21-04-2023
@@ -296,14 +302,14 @@ class OrderManager(models.Manager):
 
         return self.__annotate_sales_and_profits(q, 'day')
 
-    def today_sales(self, user: User) -> list:
+    def today_sales(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: total sales and profits in current date
         """
         return self.sales_by_day(user, timezone.now())
 
-    def sales_by_month_days(self, user: User, month: int, year: int = None) -> list:
+    def sales_by_month_days(self, user: User, month: int, year: int = None) -> QuerySet:
         """
         :param user: user model
         :param month: month
@@ -320,9 +326,9 @@ class OrderManager(models.Manager):
             day=ExtractDay('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'day')
+        return self.__annotate_sales_and_profits(q, 'day').order_by('day')
 
-    def sales_by_months(self, user: User, year: int = None) -> list:
+    def sales_by_months(self, user: User, year: int = None) -> QuerySet:
         """
         :param user: user model
         :param year: year
@@ -340,9 +346,9 @@ class OrderManager(models.Manager):
             month=ExtractMonth('order_date')
         )
 
-        return self.__annotate_sales_and_profits(q, 'month')
+        return self.__annotate_sales_and_profits(q, 'month').order_by('month')
 
-    def sales_by_years(self, user: User) -> list:
+    def sales_by_years(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: orders grouped by years with annotated total sales and profits in each year
@@ -356,9 +362,9 @@ class OrderManager(models.Manager):
 
         q = q.annotate(year=ExtractYear('order_date'))
 
-        return self.__annotate_sales_and_profits(q, 'year')
+        return self.__annotate_sales_and_profits(q, 'year').order_by('year')
 
-    def sales_by_countries(self, user: User) -> list:
+    def sales_by_countries(self, user: User) -> QuerySet:
         """
         :param user: user model
         :return: orders grouped by country of order address with annotated total sales and profits in each country
@@ -367,15 +373,15 @@ class OrderManager(models.Manager):
         user_q = self.__combine_user_filter_q(user)
 
         if user_q:
-            q = self.get_queryset().filter(user_q).prefetch_related('orderproductlistitem_set').select_related(
-                'order_address'
-            ).annotate(country=F('order_address__country'))
+            q = self.get_queryset().filter(user_q).prefetch_related(
+                'orderproductlistitem_set', 'orderproductlistitem_set__product'
+            ).select_related('order_address').annotate(country=F('order_address__country'))
         else:
-            q = self.get_queryset().prefetch_related('orderproductlistitem_set').select_related(
-                'order_address'
-            ).annotate(country=F('order_address__country'))
+            q = self.get_queryset().prefetch_related(
+                'orderproductlistitem_set', 'orderproductlistitem_set__product'
+            ).select_related('order_address').annotate(country=F('order_address__country'))
 
-        return self.__annotate_sales_and_profits(q, 'country', '-profits')
+        return self.__annotate_sales_and_profits(q, 'country').order_by('-profits')
 
 
 class Order(models.Model):
@@ -561,3 +567,4 @@ class DiscountCoupon(models.Model):
             self.valid_date = timezone.now() + timedelta(days=self.valid_time)
 
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+# endregion

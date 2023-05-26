@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -13,6 +15,14 @@ from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
 from API.models import DiscountCoupon
+
+
+# region Utility serializers
+class RecursiveSerializer(serializers.Serializer):
+    def to_representation(self, value):
+        serializer = self.parent.parent.__class__(value, context=self.context)
+        return serializer.data
+# endregion
 
 
 # region Models Serializers
@@ -49,10 +59,21 @@ class UserCreateSerializer(ModelSerializer):
 
 
 class ProductCategorySerializer(ModelSerializer):
+    children = RecursiveSerializer(many=True)
+
     class Meta:
         model = ProductCategory
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'parent', 'children')
         read_only_fields = fields
+
+
+class ProductCategoryManageSerializer(ModelSerializer):
+    parent = serializers.PrimaryKeyRelatedField(queryset=ProductCategory.objects.all())
+
+    class Meta:
+        model = ProductCategory
+        fields = ('id', 'name', 'parent')
+        read_only_fields = ('id',)
 
 
 class ProductSerializer(ModelSerializer):
@@ -61,7 +82,7 @@ class ProductSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
         read_only_fields = fields
 
 
@@ -71,7 +92,7 @@ class ProductManageSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
         read_only_fields = ['id', 'thumbnail', 'seller']
 
 
@@ -81,7 +102,7 @@ class ProductTopLeastSellersSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'stock', 'sells_count')
         read_only_fields = fields
 
 
@@ -92,7 +113,8 @@ class ProductTopLeastProfitableSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'stock', 'sells_count',
+                  'total_profit')
         read_only_fields = fields
 
 
@@ -152,6 +174,7 @@ class OrderCreateSerializer(ModelSerializer):
         fields = ('client', 'order_address', 'orderproductlistitem_set', 'discount',)
         read_only_fields = ('id',)
 
+    @transaction.atomic
     def create(self, validated_data):
         order_products = validated_data.pop('orderproductlistitem_set')
         address_data = validated_data.pop('order_address')
@@ -168,10 +191,21 @@ class OrderCreateSerializer(ModelSerializer):
         order_address = Address.objects.create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)
+
+        # reduce product stock
+        # add custom validation ex. handle cases when quantity > product.stock
+        product_quantity = {item['product']: item['quantity'] for item in order_products}
+        products = Product.objects.filter(pk__in=[item['product'] for item in order_products]).only('id', 'stock')
+        for product in products:
+            if product_quantity[product.id] > product.stock:
+                product_quantity[product.id] = product.stock
+            product.stock = F('stock') - product_quantity[product.id]
+        products.bulk_update(products, ['stock'])
+
         products_list = [
             OrderProductListItem(
-                order=instance, product=item['product'], quantity=item['quantity']
-            ) for item in order_products
+                order=instance, product=product_id, quantity=product_quantity[product_id]
+            ) for product_id in product_quantity
         ]
 
         OrderProductListItem.objects.bulk_create(products_list)

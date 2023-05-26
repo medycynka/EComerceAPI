@@ -91,6 +91,14 @@ class CategoryFactory(DjangoModelFactory):
     name = factory.LazyFunction(lambda: fake.sentence(nb_words=2))
 
 
+class CategoryLevelOneFactory(CategoryFactory):
+    parent = factory.Iterator(ProductCategory.objects.filter(level=0))
+
+
+class CategoryLevelTwoFactory(CategoryFactory):
+    parent = factory.Iterator(ProductCategory.objects.filter(level=1))
+
+
 class ProductFactory(DjangoModelFactory):
     """:model:`API.Product` factory."""
 
@@ -103,6 +111,7 @@ class ProductFactory(DjangoModelFactory):
     photo = factory.django.ImageField(width=512, height=512)
     seller = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_SELLER_GROUP_NAME))
     category = factory.Iterator(ProductCategory.objects.all())
+    stock = factory.LazyFunction(lambda: random.randint(0, 10000))
 
 
 class AddressFactory(DjangoModelFactory):

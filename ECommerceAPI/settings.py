@@ -50,6 +50,10 @@ INSTALLED_APPS = [
     'crispy_bootstrap4',   # for drf and django_filters
     'crispy_bootstrap5',
     ##
+    'django_extensions',
+    ##
+    'mptt',
+    ##
     'debug_toolbar',
     ##
     'API.apps.ApiConfig',
@@ -185,6 +189,9 @@ if DEBUG:
 
 # Django countries
 COUNTRIES_FLAG_URL = "assets/flags/{code}.gif"
+
+# Django MPTT
+MPTT_ADMIN_LEVEL_INDENT = 20
 
 # Custom project variables
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
