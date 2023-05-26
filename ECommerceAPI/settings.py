@@ -190,6 +190,9 @@ if DEBUG:
 # Django countries
 COUNTRIES_FLAG_URL = "assets/flags/{code}.gif"
 
+# Django MPTT
+MPTT_ADMIN_LEVEL_INDENT = 20
+
 # Custom project variables
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_EMAIL_ADDRESS = os.environ.get('DEFAULT_EMAIL_ADDRESS', 'shop.example@platform.com')

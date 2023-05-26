@@ -28,13 +28,13 @@ class ProductCategoryType(DjangoObjectType):
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
 
 
 class ProductStatisticType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
 
     sells_count = graphene.Int()
     total_profit = graphene.Decimal()

@@ -22,9 +22,8 @@ from io import BytesIO
 from datetime import timedelta, datetime
 from decimal import Decimal
 
-# Create your models here.
 
-
+# region Products
 class ProductCategory(MPTTModel):
     name = models.CharField(verbose_name=_("Category name"), max_length=128)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
@@ -42,7 +41,7 @@ class ProductCategory(MPTTModel):
 
 
 class ProductManager(models.Manager):
-    def products_by_seller(self, seller: User, filter_q: Q = None):
+    def products_by_seller(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         :param seller: user with 'seller' role
         :param filter_q: additional filtering expression
@@ -57,7 +56,7 @@ class ProductManager(models.Manager):
 
         return q
 
-    def counted_sales(self, seller: User, filter_q: Q = None):
+    def counted_sales(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products annotated with the total number of copies sold
         :param seller: user model representing 'seller'
@@ -75,7 +74,7 @@ class ProductManager(models.Manager):
             )
         )
 
-    def top_sellers(self, seller: User, filter_q: Q = None):
+    def top_sellers(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from most to least frequently purchased
         :param seller: user model representing 'seller'
@@ -85,7 +84,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_sales(seller, filter_q).order_by('-sells_count')
 
-    def least_sellers(self, seller: User, filter_q: Q = None):
+    def least_sellers(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from least to most frequently purchased
         :param seller: user model representing 'seller'
@@ -95,7 +94,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_sales(seller, filter_q).order_by('sells_count')
 
-    def counted_profits(self, seller: User, filter_q: Q = None):
+    def counted_profits(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products annotated with the total profit
         :param seller: user model representing 'seller'
@@ -111,7 +110,7 @@ class ProductManager(models.Manager):
             )
         )
 
-    def most_profitable(self, seller: User, filter_q: Q = None):
+    def most_profitable(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from most to least profitable
         :param seller: user model representing 'seller'
@@ -121,7 +120,7 @@ class ProductManager(models.Manager):
         """
         return self.counted_profits(seller, filter_q).order_by('-total_profit')
 
-    def least_profitable(self, seller: User, filter_q: Q = None):
+    def least_profitable(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         Get products in order from least to most profitable
         :param seller: user model representing 'seller'
@@ -130,6 +129,18 @@ class ProductManager(models.Manager):
         :return: products in order from least to most profitable
         """
         return self.counted_profits(seller, filter_q).order_by('total_profit')
+
+    def available(self) -> QuerySet:
+        """
+        :return: Available products query with stock > 0
+        """
+        return self.get_queryset().filter(stock__gt=0)
+
+    def out_of_stock(self) -> QuerySet:
+        """
+        :return: Not available products query with stock == 0
+        """
+        return self.get_queryset().filter(stock=0)
 
 
 class Product(models.Model):
@@ -141,6 +152,7 @@ class Product(models.Model):
     photo = models.ImageField(verbose_name=_("Product photo"), upload_to='photos')
     thumbnail = models.ImageField(verbose_name=_("Product thumbnail"), upload_to='thumbnails', blank=True, default=None)
     seller = models.ForeignKey(User, verbose_name=_("Product seller"), null=True, on_delete=models.CASCADE)
+    stock = models.PositiveIntegerField(verbose_name=_("Stock"), default=0)
 
     objects = ProductManager()
 
@@ -155,36 +167,38 @@ class Product(models.Model):
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         self.create_thumbnail()
 
-        super().save(force_insert=force_insert, force_update=force_update, using=using,
-                                  update_fields=update_fields)
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
     def create_thumbnail(self):
         """
         Create a thumbnail image from provided `photo` file
         """
 
-        thumbnail = Image.open(self.photo)
-        thumbnail.thumbnail(settings.THUMBNAIL_SIZE, Image.ANTIALIAS)
-
         thumbnail_name, thumbnail_extension = os.path.splitext(self.photo.name)
         thumbnail_extension = thumbnail_extension.lower()
         thumb_filename = thumbnail_name + '_thumbnail' + thumbnail_extension
 
-        if thumbnail_extension in ['.jpg', '.jpeg']:
-            file_type = 'JPEG'
-        elif thumbnail_extension == '.png':
-            file_type = 'PNG'
-        else:
-            raise ValueError("Wrong product photo image! Accepted extensions are: jpg, jpeg or png!")
+        if self.thumbnail.name != thumb_filename:
+            thumbnail = Image.open(self.photo)
+            thumbnail.thumbnail(settings.THUMBNAIL_SIZE, Image.ANTIALIAS)
 
-        temp_thumbnail = BytesIO()
-        thumbnail.save(temp_thumbnail, file_type)
-        temp_thumbnail.seek(0)
+            if thumbnail_extension in ['.jpg', '.jpeg']:
+                file_type = 'JPEG'
+            elif thumbnail_extension == '.png':
+                file_type = 'PNG'
+            else:
+                raise ValueError("Wrong product photo image! Accepted extensions are: jpg, jpeg or png!")
 
-        self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
-        temp_thumbnail.close()
+            temp_thumbnail = BytesIO()
+            thumbnail.save(temp_thumbnail, file_type)
+            temp_thumbnail.seek(0)
+
+            self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
+            temp_thumbnail.close()
+# endregion
 
 
+# region Orders
 class Address(models.Model):
     class PolishStates(models.IntegerChoices):
         """
@@ -553,3 +567,4 @@ class DiscountCoupon(models.Model):
             self.valid_date = timezone.now() + timedelta(days=self.valid_time)
 
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+# endregion

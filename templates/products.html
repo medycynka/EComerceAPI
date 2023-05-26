@@ -138,13 +138,14 @@
                 sessionStorage.removeItem('shopping-cart')
             }
 
-            const addToShoppingCart = (name, price, productId) => {
+            const addToShoppingCart = (name, price, productId, stock) => {
                 if (canBuyProducts && !shoppingCartIds.has(productId)) {
                     shoppingCartIds.add(productId);
                     shoppingCart.push({
-                       'id': productId,
+                        'id': productId,
                         'name': name,
                         'price': price,
+                        'stock': stock,
                     });
                     sessionStorage.setItem('shopping-cart', JSON.stringify(shoppingCart));
                     Growl.growl({
@@ -267,7 +268,7 @@
                                     </div>
                                     <ul class="icons">
                                         <li><a href="${currentUrl + products[i].id}/" data-tip="Quick View"><i class="fe fe-eye "></i></a></li>
-                                        <li><a href="javascript:void(0)" id="shoppingCartAdder" data-product-cart-data="${products[i].name};${products[i].price};${products[i].id}" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
+                                        <li><a href="javascript:void(0)" id="shoppingCartAdder" data-product-cart-data="${products[i].name};${products[i].price};${products[i].id};${products[i].stock}" data-tip="Add to Cart"><i class="fa fa-shopping-cart"></i></a></li>
                                     </ul>
                                 </div>
                             </div>

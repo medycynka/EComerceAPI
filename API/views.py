@@ -60,7 +60,7 @@ class ProductCategoryModelViewSet(ModelViewSet):
 
 class ProductModelViewSet(ModelViewSet):
     serializer_class = ProductManageSerializer
-    queryset = Product.objects.select_related('category').all().order_by('-pk')
+    queryset = Product.objects.available().select_related('category').order_by('-pk')
     permission_classes = [AuthenticatedSellersOnly]
     filterset_class = ProductFilter
 
@@ -75,6 +75,11 @@ class ProductModelViewSet(ModelViewSet):
         else:
             permission_classes = self.permission_classes
         return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+            return Product.objects.all().select_related('category').order_by('-pk')
+        return super().get_queryset()
 
 
 class ProductListCreateAPIView(ListCreateAPIView):

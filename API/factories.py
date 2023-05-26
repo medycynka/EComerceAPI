@@ -92,12 +92,11 @@ class CategoryFactory(DjangoModelFactory):
 
 
 class CategoryLevelOneFactory(CategoryFactory):
-    CATEGORY_TREE_LEVEL = 0
-    parent = factory.Iterator(ProductCategory.objects.filter(level=CATEGORY_TREE_LEVEL))
+    parent = factory.Iterator(ProductCategory.objects.filter(level=0))
 
 
-class CategoryLevelTwoFactory(CategoryLevelOneFactory):
-    CATEGORY_TREE_LEVEL = 1
+class CategoryLevelTwoFactory(CategoryFactory):
+    parent = factory.Iterator(ProductCategory.objects.filter(level=1))
 
 
 class ProductFactory(DjangoModelFactory):
@@ -112,6 +111,7 @@ class ProductFactory(DjangoModelFactory):
     photo = factory.django.ImageField(width=512, height=512)
     seller = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_SELLER_GROUP_NAME))
     category = factory.Iterator(ProductCategory.objects.all())
+    stock = factory.LazyFunction(lambda: random.randint(0, 10000))
 
 
 class AddressFactory(DjangoModelFactory):

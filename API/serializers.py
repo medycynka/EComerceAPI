@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
@@ -80,7 +82,7 @@ class ProductSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
         read_only_fields = fields
 
 
@@ -90,7 +92,7 @@ class ProductManageSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
         read_only_fields = ['id', 'thumbnail', 'seller']
 
 
@@ -100,7 +102,7 @@ class ProductTopLeastSellersSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'stock', 'sells_count')
         read_only_fields = fields
 
 
@@ -111,7 +113,8 @@ class ProductTopLeastProfitableSerializer(ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'sells_count', 'total_profit')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'stock', 'sells_count',
+                  'total_profit')
         read_only_fields = fields
 
 
@@ -171,6 +174,7 @@ class OrderCreateSerializer(ModelSerializer):
         fields = ('client', 'order_address', 'orderproductlistitem_set', 'discount',)
         read_only_fields = ('id',)
 
+    @transaction.atomic
     def create(self, validated_data):
         order_products = validated_data.pop('orderproductlistitem_set')
         address_data = validated_data.pop('order_address')
@@ -187,6 +191,17 @@ class OrderCreateSerializer(ModelSerializer):
         order_address = Address.objects.create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)
+
+        # reduce product stock
+        # add custom validation ex. handle cases when quantity > product.stock
+        product_quantity = {item['product']: item['quantity'] for item in order_products}
+        products = Product.objects.filter(pk__in=[item['product'] for item in order_products]).only('id', 'stock')
+        for product in products:
+            product.stock = F('stock') - product_quantity[product.id]
+            if product.stock < 0:
+                product.stock = 0
+        products.bulk_update(products, ['stock'])
+
         products_list = [
             OrderProductListItem(
                 order=instance, product=item['product'], quantity=item['quantity']
