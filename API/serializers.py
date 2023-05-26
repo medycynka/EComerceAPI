@@ -197,15 +197,15 @@ class OrderCreateSerializer(ModelSerializer):
         product_quantity = {item['product']: item['quantity'] for item in order_products}
         products = Product.objects.filter(pk__in=[item['product'] for item in order_products]).only('id', 'stock')
         for product in products:
+            if product_quantity[product.id] > product.stock:
+                product_quantity[product.id] = product.stock
             product.stock = F('stock') - product_quantity[product.id]
-            if product.stock < 0:
-                product.stock = 0
         products.bulk_update(products, ['stock'])
 
         products_list = [
             OrderProductListItem(
-                order=instance, product=item['product'], quantity=item['quantity']
-            ) for item in order_products
+                order=instance, product=product_id, quantity=product_quantity[product_id]
+            ) for product_id in product_quantity
         ]
 
         OrderProductListItem.objects.bulk_create(products_list)
