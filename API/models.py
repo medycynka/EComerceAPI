@@ -23,6 +23,46 @@ from datetime import timedelta, datetime
 from decimal import Decimal
 
 
+# region Abstract Core Models
+class SoftDeleteQuerySet(QuerySet):
+    def delete(self, force=False):
+        """
+        'Delete' the records in the current QuerySet by setting is_deleted to True.
+        :param force: force delete - if True perform actual delete in db ex. for admin management
+        """
+        if force:
+            super().delete()
+        else:
+            self.update(is_deleted=True)
+
+
+class SoftDeleteManager(models.manager.BaseManager.from_queryset(SoftDeleteQuerySet)):
+    def get_queryset(self, with_deleted: bool = False):
+        if with_deleted:
+            return super().get_queryset()
+        return super().get_queryset().filter(is_deleted=False)
+
+    def deleted(self):
+        return self.get_queryset(with_deleted=True).filter(is_deleted=True)
+
+
+class SoftDeleteModel(models.Model):
+    is_deleted = models.BooleanField(default=False)
+
+    objects = SoftDeleteManager()
+
+    class Meta:
+        abstract = True
+
+    def delete(self, using=None, keep_parents=False, force=False):
+        if force:
+            super(SoftDeleteModel, self).delete(using=using, keep_parents=keep_parents)
+        else:
+            self.is_deleted = True
+            self.save()
+# endregion
+
+
 # region Products
 class ProductCategory(MPTTModel):
     name = models.CharField(verbose_name=_("Category name"), max_length=128)
@@ -257,7 +297,7 @@ class Address(models.Model):
         super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
 
 
-class OrderManager(models.Manager):
+class OrderManager(SoftDeleteManager):
     def __combine_user_filter_q(self, user: User) -> Q:
         """
         :param user: user model
@@ -384,7 +424,7 @@ class OrderManager(models.Manager):
         return self.__annotate_sales_and_profits(q, 'country').order_by('-profits')
 
 
-class Order(models.Model):
+class Order(SoftDeleteModel):
     class OrderStatus(models.IntegerChoices):
         """
         Order status:

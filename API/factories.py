@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.utils import timezone
+from django.db.models import F
 
 # 3rd-party
 import factory
@@ -158,6 +159,17 @@ class OrderFactory(DjangoModelFactory):
                 quantity=random.randint(1, 32)
             ) for i in range(count)
         ], count)
+        ordered_products = {
+            item['product_id']: item['quantity'] for item in OrderProductListItem.objects.filter(order=self).values(
+                'product_id', 'quantity'
+            )
+        }
+        products = Product.objects.filter(pk__in=[p_id for p_id in ordered_products]).only('id', 'stock')
+        for product in products:
+            if ordered_products[product.id] > product.stock:
+                ordered_products[product.id] = product.stock
+            product.stock = F('stock') - ordered_products[product.id]
+        Product.objects.bulk_update(products, ['stock'])
         self.save(update_full_price=True)
 
 
