@@ -24,13 +24,12 @@ class ProductCategoryAdmin(MPTTModelAdmin):
 
 @admin.action(description='Randomise products categories')
 def randomise_categories(modeladmin, request, queryset):
-    products = Product.objects.all()
-    categories = [category_id for category_id in ProductCategory.objects.all().values_list('id', flat=True)]
+    categories = [category_id for category_id in queryset.values_list('id', flat=True)]
 
-    for product in products:
+    for product in queryset:
         product.category_id = random.choice(categories)
 
-    Product.objects.bulk_update(products, ['category'])
+    Product.objects.bulk_update(queryset, ['category'])
 
 
 @admin.register(Product)
@@ -50,13 +49,17 @@ class AddressAdmin(admin.ModelAdmin):
 
 @admin.action(description='Randomise orders statuses')
 def randomise_statuses(modeladmin, request, queryset):
-    orders = Order.objects.all()
     statuses_count = len(Order.OrderStatus.choices)
 
-    for order in orders:
+    for order in queryset:
         order.status = random.randint(0, statuses_count)
 
-    Order.objects.bulk_update(orders, ['status'])
+    Order.objects.bulk_update(queryset, ['status'])
+
+
+@admin.action(description='Soft delete selected orders')
+def soft_delete(modeladmin, request, queryset):
+    queryset.delete()
 
 
 class OrderProductListItemInline(admin.TabularInline):
@@ -78,4 +81,10 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('client__email', 'order_date')
     search_fields = ('client__email',)
     inlines = (OrderProductListItemInline,)
-    actions = [randomise_statuses]
+    actions = [randomise_statuses, soft_delete]
+
+    def delete_model(self, request, obj):
+        obj.delete(force=True)
+
+    def delete_queryset(self, request, queryset):
+        queryset.delete(force=True)

@@ -188,7 +188,8 @@ class OrderCreateSerializer(ModelSerializer):
         else:
             validated_data['discount'] = 0.0
 
-        order_address = Address.objects.create(**address_data)
+        # try to get for possible repeated delivery address
+        order_address, _ = Address.objects.get_or_create(**address_data)
         validated_data['order_address'] = order_address
         instance = super().create(validated_data)
 
