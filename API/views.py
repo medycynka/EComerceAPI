@@ -19,6 +19,7 @@ from API.api_permissions import AuthenticatedClientsOnly
 from API.api_permissions import AuthenticatedSellersOnly
 from API.models import ProductCategory
 from API.models import Product
+from API.models import ProductRating
 from API.models import Order
 from API.models import Address
 from API.models import DiscountCoupon
@@ -26,6 +27,8 @@ from API.serializers import ProductCategorySerializer
 from API.serializers import ProductCategoryManageSerializer
 from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
+from API.serializers import ProductRatingSerializer
+from API.serializers import ProductRatingCreateSerializer
 from API.serializers import ProductTopLeastSellersSerializer
 from API.serializers import ProductTopLeastProfitableSerializer
 from API.serializers import AddressSerializer
@@ -67,6 +70,8 @@ class ProductModelViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
             return ProductSerializer
+        elif self.action == 'rate_product':
+            return ProductRatingCreateSerializer
         return self.serializer_class
 
     def get_permissions(self):
@@ -80,6 +85,34 @@ class ProductModelViewSet(ModelViewSet):
         if self.request.user.is_superuser:
             return Product.objects.all().select_related('category').order_by('-pk')
         return super().get_queryset()
+
+    @action(methods=['post'], detail=False, url_path='rate-product', url_name='rate_product')
+    def rate_product(self, request):
+        product_rating = ProductRatingCreateSerializer(data=request.data)
+
+        if product_rating.is_valid():
+            product_rating.save()
+
+            return Response(product_rating.data, status=status.HTTP_201_CREATED)
+        return Response(product_rating.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductRatingsModelViewSet(ModelViewSet):
+    serializer_class = ProductRatingCreateSerializer
+    queryset = ProductRating.objects.select_related('product').all()
+    permission_classes = [AuthenticatedClientsOnly]
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return ProductRatingSerializer
+        return self.serializer_class
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
 
 class ProductListCreateAPIView(ListCreateAPIView):

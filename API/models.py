@@ -1,7 +1,9 @@
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator
 from django.db import models
-from django.db.models import F, Q, QuerySet
+from django.db.models import F, QuerySet
+from django.db.models import Avg
 from django.utils import timezone
 from django.utils.text import gettext_lazy as _
 from django.conf import settings
@@ -109,6 +111,18 @@ class Product(models.Model):
 
             self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
             temp_thumbnail.close()
+
+    def get_ratings(self) -> float:
+        if self.productrating_set.exists():
+            return self.productrating_set.aggregate(ratings=Avg('rating'))['ratings']
+        return 0.0
+
+
+class ProductRating(models.Model):
+    product = models.ForeignKey('API.Product', verbose_name=_("Product"), on_delete=models.CASCADE)
+    rating = models.FloatField(verbose_name=_("Rating"), blank=True, default=0.0, validators=[
+        MinValueValidator(0.0), MaxValueValidator(5.0)
+    ])
 # endregion
 
 
