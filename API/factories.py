@@ -25,29 +25,10 @@ from string import ascii_letters, digits
 
 fake = Faker(settings.LANGUAGE_CODE)
 
-unique_words = {fake.word() for i in range(512)}
-
-
-def cut_phrase(phrase):
-    return (phrase[0:42] + '...') if len(phrase) > 45 else phrase
-
-
-def pickrandom():
-    pick = random.choice(tuple(unique_words))
-    unique_words.remove(pick)
-    return pick
-
 
 def get_random_string(part_length: int = 4, parts: int = 1, parts_join: str = '-',
                       characters: str = ascii_letters + digits):
     return parts_join.join([f'{"".join(random.choices(characters, k=part_length))}' for _ in range(parts)])
-
-
-def random_number(length=10):
-    number = ''
-    for i in range(0, length):
-        number += f'{fake.random_digit()}'
-    return number
 
 
 def random_postal_code():

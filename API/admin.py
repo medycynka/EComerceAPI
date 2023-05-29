@@ -34,7 +34,7 @@ def randomise_categories(modeladmin, request, queryset):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'price', 'category', 'seller')
+    list_display = ('id', 'name', 'price', 'category', 'seller', 'stock')
     list_filter = ('name', 'seller')
     search_fields = ('name', 'category__name')
     actions = [randomise_categories]
