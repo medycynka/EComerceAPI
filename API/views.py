@@ -63,7 +63,11 @@ class ProductCategoryModelViewSet(ModelViewSet):
 
 class ProductModelViewSet(ModelViewSet):
     serializer_class = ProductManageSerializer
-    queryset = Product.objects.available().select_related('category').order_by('-pk')
+    queryset = Product.objects.available().select_related(
+        'category'
+    ).prefetch_related(
+        'productrating_set'
+    ).order_by('-pk')
     permission_classes = [AuthenticatedSellersOnly]
     filterset_class = ProductFilter
 
@@ -75,7 +79,7 @@ class ProductModelViewSet(ModelViewSet):
         return self.serializer_class
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'ratings']:
             permission_classes = [AllowAny]
         else:
             permission_classes = self.permission_classes
@@ -88,13 +92,25 @@ class ProductModelViewSet(ModelViewSet):
 
     @action(methods=['post'], detail=False, url_path='rate-product', url_name='rate_product')
     def rate_product(self, request):
-        product_rating = ProductRatingCreateSerializer(data=request.data)
+        product_rating = ProductRatingCreateSerializer(data=request.data, context={'request': self.request})
 
         if product_rating.is_valid():
             product_rating.save()
 
             return Response(product_rating.data, status=status.HTTP_201_CREATED)
         return Response(product_rating.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=True, url_path='ratings', url_name='ratings')
+    def ratings(self, request, pk=None):
+        product = self.get_object()
+        page = self.paginate_queryset(product.productrating_set.all())
+
+        if page is not None:
+            serializer = ProductRatingSerializer(page, many=True)
+
+            return self.get_paginated_response(serializer.data)
+
+        return Response(ProductRatingSerializer(product.productrating_set.all(), many=True).data)
 
 
 class ProductRatingsModelViewSet(ModelViewSet):

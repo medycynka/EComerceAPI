@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import F, Q, QuerySet
+from django.db.models import F, Q, QuerySet, Avg
 from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
@@ -10,6 +10,8 @@ from django.conf import settings
 from django.utils import timezone
 
 from datetime import datetime
+from typing import Union, Tuple, List
+import sys
 
 
 class SoftDeleteQuerySet(QuerySet):
@@ -35,6 +37,8 @@ class SoftDeleteManager(models.manager.BaseManager.from_queryset(SoftDeleteQuery
 
 
 class ProductManager(models.Manager):
+    EPSILON = sys.float_info.epsilon
+
     def products_by_seller(self, seller: User, filter_q: Q = None) -> QuerySet:
         """
         :param seller: user with 'seller' role
@@ -135,6 +139,90 @@ class ProductManager(models.Manager):
         :return: Not available products query with stock == 0
         """
         return self.get_queryset().filter(stock=0)
+
+    def with_ratings(self) -> QuerySet:
+        """
+        Get products annotated with average ratings
+        """
+        return self.get_queryset().prefetch_related('productrating_set').annotate(
+            ratings=Coalesce(Avg('productrating__rating'), Cast(0.0, models.FloatField()))
+        )
+
+    def n_star_rating(self, stars: Union[Tuple[float, float], List[float]]) -> QuerySet:
+        """
+        Get products filtered by provided ratings range
+        :param stars: ratings range [min, max]
+        :return: products annotated with ratings in provided  range
+        """
+        if len(stars):
+            if len(stars) == 1:
+                stars = (stars[0], 5.0)
+            if stars[0] < 0.0 or stars[0] > 5.0:
+                raise ValueError("'min' value error! Product ratings are from 0 to 5.")
+            if stars[1] < 0.0 or stars[1] > 5.0:
+                raise ValueError("'max' value error! Product ratings are from 0 to 5.")
+            return self.with_ratings().filter(Q(ratings__gte=stars[0]) & Q(ratings__lte=stars[1]))
+        raise ValueError("Empty 'stars' argument!")
+
+    def zero_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '0 star' rated products
+        :param with_half: should query include half values, if yes returns stars range [0.0, 0.5]
+        :return: products with '0 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((0.0, 0.5))
+        return self.n_star_rating((0.0, self.EPSILON))
+
+    def one_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '1 star' rated products (without half stars ex 1.5)
+        :param with_half: should query include half values, if yes returns stars range [0.5, 1.5]
+        :return: products with '1 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((0.5, 1.5))
+        return self.n_star_rating((0.5 + self.EPSILON, 1.5 - self.EPSILON))
+
+    def two_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '2 star' rated products (without half stars ex 1.5)
+        :param with_half: should query include half values, if yes returns stars range [1.5, 2.5]
+        :return: products with '2 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((1.5, 2.5))
+        return self.n_star_rating((1.5 + self.EPSILON, 2.5 - self.EPSILON))
+
+    def three_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '3 star' rated products (without half stars ex 3.5)
+        :param with_half: should query include half values, if yes returns stars range [2.5, 3.5]
+        :return: products with '3 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((2.5, 3.5))
+        return self.n_star_rating((2.5 + self.EPSILON, 3.5 - self.EPSILON))
+
+    def four_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '4 star' rated products (without half stars ex 4.5)
+        :param with_half: should query include half values, if yes returns stars range [3.5, 4.5]
+        :return: products with '4 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((3.5, 4.5))
+        return self.n_star_rating((3.5 + self.EPSILON, 4.5 - self.EPSILON))
+
+    def five_stars(self, with_half: bool = False) -> QuerySet:
+        """
+        Wrapper for 'n_star_rating' for getting '5 star' rated products (without half stars ex 4.5)
+        :param with_half: should query include half values, if yes returns stars range [4.5, 5.0]
+        :return: products with '5 star' ratings
+        """
+        if with_half:
+            return self.n_star_rating((4.5, 5.0))
+        return self.n_star_rating((4.5 + self.EPSILON, 5.0))
 
 
 class OrderManager(SoftDeleteManager):

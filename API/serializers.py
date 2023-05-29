@@ -77,6 +77,27 @@ class ProductCategoryManageSerializer(ModelSerializer):
         read_only_fields = ('id',)
 
 
+class ProductRatingSerializer(ModelSerializer):
+    reviewer = UserSerializer()
+
+    class Meta:
+        model = ProductRating
+        fields = ('id', 'product', 'rating', 'reviewer', 'review')
+        read_only_fields = fields
+
+
+class ProductRatingCreateSerializer(ModelSerializer):
+    class Meta:
+        model = ProductRating
+        fields = ('id', 'product', 'rating', 'review')
+        read_only_fields = ('id',)
+
+    def create(self, validated_data):
+        validated_data['reviewer'] = self.context['request'].user
+
+        return super().create(validated_data)
+
+
 class ProductSerializer(ModelSerializer):
     category = ProductCategorySerializer()
     seller = UserSerializer()
@@ -96,20 +117,6 @@ class ProductManageSerializer(ModelSerializer):
         model = Product
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
         read_only_fields = ['id', 'thumbnail', 'seller']
-
-
-class ProductRatingSerializer(ModelSerializer):
-    class Meta:
-        model = ProductRating
-        fields = ('id', 'product', 'rating')
-        read_only_fields = fields
-
-
-class ProductRatingCreateSerializer(ModelSerializer):
-    class Meta:
-        model = ProductRating
-        fields = ('id', 'product', 'rating')
-        read_only_fields = ('id',)
 
 
 class ProductTopLeastSellersSerializer(ModelSerializer):

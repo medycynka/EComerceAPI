@@ -120,9 +120,16 @@ class Product(models.Model):
 
 class ProductRating(models.Model):
     product = models.ForeignKey('API.Product', verbose_name=_("Product"), on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(User, verbose_name=_("Reviewer"), on_delete=models.CASCADE)
+    review = models.TextField(verbose_name=_('Review'), blank=True, default=True)
     rating = models.FloatField(verbose_name=_("Rating"), blank=True, default=0.0, validators=[
         MinValueValidator(0.0), MaxValueValidator(5.0)
     ])
+
+    class Meta:
+        db_table = 'API_product_rating'
+        verbose_name = 'product rating'
+        verbose_name_plural = 'product ratings'
 # endregion
 
 
