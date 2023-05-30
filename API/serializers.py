@@ -12,6 +12,7 @@ from django_countries.serializer_fields import CountryField
 from API.models import ProductCategory
 from API.models import Product
 from API.models import ProductRating
+from API.models import ProductView
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
@@ -104,14 +105,21 @@ class ProductRatingCreateSerializer(ModelSerializer):
         return super().create(validated_data)
 
 
+class ProductViewSerializer(ModelSerializer):
+    class Meta:
+        model = ProductView
+        fields = ('id', 'product', 'ip', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+
 class ProductSerializer(ModelSerializer):
     category = ProductCategorySerializer()
     seller = UserSerializer()
-    ratings = serializers.ReadOnlyField(source='get_ratings')
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock', 'ratings')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock', 'ratings',
+                  'views')
         read_only_fields = fields
 
 

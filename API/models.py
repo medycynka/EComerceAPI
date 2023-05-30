@@ -112,10 +112,15 @@ class Product(models.Model):
             self.thumbnail.save(thumb_filename, ContentFile(temp_thumbnail.read()), save=False)
             temp_thumbnail.close()
 
-    def get_ratings(self) -> float:
+    @property
+    def ratings(self) -> float:
         if self.productrating_set.exists():
             return self.productrating_set.aggregate(ratings=Avg('rating'))['ratings']
         return 0.0
+
+    @property
+    def views(self) -> int:
+        return self.productview_set.count()
 
 
 class ProductRating(models.Model):
@@ -125,12 +130,23 @@ class ProductRating(models.Model):
     rating = models.FloatField(verbose_name=_("Rating"), blank=True, default=0.0, validators=[
         MinValueValidator(0.0), MaxValueValidator(5.0)
     ])
-    created_at = models.DateTimeField(verbose_name=_("Order date"), auto_now_add=True)
+    created_at = models.DateTimeField(verbose_name=_("Created at"), auto_now_add=True)
 
     class Meta:
         db_table = 'API_product_rating'
         verbose_name = 'product rating'
         verbose_name_plural = 'product ratings'
+
+
+class ProductView(models.Model):
+    product = models.ForeignKey('API.Product', verbose_name=_("Product"), on_delete=models.CASCADE)
+    ip = models.GenericIPAddressField(verbose_name=_('IP Address'))
+    created_at = models.DateTimeField(verbose_name=_("Created at"), auto_now_add=True)
+
+    class Meta:
+        db_table = 'API_product_views'
+        verbose_name = 'product view'
+        verbose_name_plural = 'product views'
 # endregion
 
 

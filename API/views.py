@@ -20,6 +20,7 @@ from API.api_permissions import AuthenticatedSellersOnly
 from API.models import ProductCategory
 from API.models import Product
 from API.models import ProductRating
+from API.models import ProductView
 from API.models import Order
 from API.models import Address
 from API.models import DiscountCoupon
@@ -29,6 +30,7 @@ from API.serializers import ProductSerializer
 from API.serializers import ProductManageSerializer
 from API.serializers import ProductRatingSerializer
 from API.serializers import ProductRatingCreateSerializer
+from API.serializers import ProductViewSerializer
 from API.serializers import ProductTopLeastSellersSerializer
 from API.serializers import ProductTopLeastProfitableSerializer
 from API.serializers import AddressSerializer
@@ -90,6 +92,21 @@ class ProductModelViewSet(ModelViewSet):
             return Product.objects.all().select_related('category').order_by('-pk')
         return super().get_queryset()
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+
+        if x_forwarded_for:
+            ip_address = x_forwarded_for.split(",")[0]
+        else:
+            ip_address = request.META.get("REMOTE_ADDR")
+
+        if not ProductView.objects.filter(product=instance, ip=ip_address).exists():
+            ProductView.objects.create(product=instance, ip=ip_address)
+
+        return Response(serializer.data)
+
     @action(methods=['post'], detail=False, url_path='rate-product', url_name='rate_product')
     def rate_product(self, request):
         product_rating = ProductRatingCreateSerializer(data=request.data, context={'request': self.request})
@@ -128,6 +145,20 @@ class ProductRatingsModelViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             permission_classes = [AllowAny]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
+
+
+class ProductViewModelViewSet(ModelViewSet):
+    serializer_class = ProductViewSerializer
+    queryset = ProductView.objects.all()
+    permission_classes = [AllowAny]
+    pagination_class = LimitOffsetPagination
+
+    def get_permissions(self):
+        if self.action in ['update', 'destroy', 'partial_update']:
+            permission_classes = [IsAdminUser]
         else:
             permission_classes = self.permission_classes
         return [permission() for permission in permission_classes]

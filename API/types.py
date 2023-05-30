@@ -7,6 +7,7 @@ from django_countries.graphql.types import Country
 
 from API.models import ProductCategory
 from API.models import Product
+from API.models import ProductRating
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
@@ -31,6 +32,12 @@ class ProductType(DjangoObjectType):
         fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
 
 
+class ProductRatingType(DjangoObjectType):
+    class Meta:
+        model = ProductRating
+        fields = ('id', 'product', 'reviewer', 'review', 'rating', 'created_at')
+
+
 class ProductStatisticType(DjangoObjectType):
     class Meta:
         model = Product
@@ -38,6 +45,8 @@ class ProductStatisticType(DjangoObjectType):
 
     sells_count = graphene.Int()
     total_profit = graphene.Decimal()
+    ratings = graphene.Float()
+    rates_count = graphene.Int()
 
 
 class AddressType(DjangoObjectType):

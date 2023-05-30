@@ -8,6 +8,7 @@ from API.models import Order
 from API.models import DiscountCoupon
 from API.types import ProductCategoryType
 from API.types import ProductType
+from API.types import ProductRatingType
 from API.types import ProductStatisticType
 from API.types import OrderType
 from API.types import SalesAndProfitsType
@@ -70,6 +71,8 @@ class APIQuery(graphene.ObjectType):
     least_profitable_single = graphene.Field(ProductStatisticType,
                                              date_from=graphene.String(required=False),
                                              date_to=graphene.String(required=False))
+    top_rated = graphene.List(ProductStatisticType, limit=graphene.Int(required=False))
+    least_rated = graphene.List(ProductStatisticType, limit=graphene.Int(required=False))
     all_orders = graphene.List(OrderType,
                                limit=graphene.Int(required=False),
                                date_from=graphene.String(required=False),
@@ -136,6 +139,12 @@ class APIQuery(graphene.ObjectType):
         return Product.objects.least_profitable(
             info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
         ).first()
+
+    def resolve_top_rated(self, info, **kwargs):
+        return Product.objects.with_ratings().order_by('-ratings', '-rates_count')[:kwargs.get("limit", 10)]
+
+    def resolve_least_rated(self, info, **kwargs):
+        return Product.objects.with_ratings().order_by('ratings', '-rates_count')[:kwargs.get("limit", 10)]
 
     def resolve_all_orders(self, info, **kwargs):
         date_from_limit = kwargs.get("date_from", None)
