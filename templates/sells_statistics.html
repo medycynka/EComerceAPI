@@ -287,6 +287,28 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Top rated</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <canvas id="topRated" class="chart-donut"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-md-12 col-lg-12 col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Worst rated</h3>
+                </div>
+                <div class="card-body pb-0">
+                    <canvas id="worstRated" class="chart-donut"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 {% block custom_scripts %}
     <!-- INTERNAL ion.rangeSlider.min js -->
@@ -374,6 +396,31 @@
                     }
                 },
             });
+            const recentOrdersChart = new Chart(document.getElementById('recentOrders'), {
+                type: 'pie',
+                data: {
+                    labels: ['Paid', 'Unpaid'],
+                    datasets: [
+                        {
+                            label: "Orders count",
+                            data: [1, 1],
+                            backgroundColor: ['rgb(153, 102, 255)', 'rgb(255, 93, 158)'],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Paid orders'
+                        }
+                    },
+                },
+            });
             const topSellersChart = new Chart(document.getElementById('topSellers'), {
                 type: 'bar',
                 data: {
@@ -433,31 +480,6 @@
                     }
                 },
             });
-            const recentOrdersChart = new Chart(document.getElementById('recentOrders'), {
-                type: 'pie',
-                data: {
-                    labels: ['Paid', 'Unpaid'],
-                    datasets: [
-                        {
-                            label: "Orders count",
-                            data: [1, 1],
-                            backgroundColor: ['rgb(153, 102, 255)', 'rgb(255, 93, 158)'],
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Paid orders'
-                        }
-                    },
-                },
-            });
             const leastSellersChart = new Chart(document.getElementById('leastSellers'), {
                 type: 'bar',
                 data: {
@@ -501,6 +523,124 @@
                                                 notation: 'compact',
                                                 compactDisplay: 'long'
                                             }).format(context.parsed.y) + ' PLN';
+                                        } else {
+                                            label += context.parsed.y.toString();
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                },
+            });
+            const topRatedChart = new Chart(document.getElementById('topRated'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (v, k) => '-'),
+                    datasets: [
+                        {
+                            label: "Rating",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        },
+                        {
+                            label: "Ratings count",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Top rated'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex > 0) {
+                                            label += new Intl.NumberFormat('en', {
+                                                notation: 'compact',
+                                                compactDisplay: 'long'
+                                            }).format(context.parsed.y);
+                                        } else {
+                                            label += context.parsed.y.toString();
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                },
+            });
+            const worstRatedChart = new Chart(document.getElementById('worstRated'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (v, k) => '-'),
+                    datasets: [
+                        {
+                            label: "Rating",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(255, 159, 64)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                        },
+                        {
+                            label: "Ratings count",
+                            data: Array.from({length: 10}, (v, k) => 0),
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Worst rated'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        if (context.datasetIndex > 0) {
+                                            label += new Intl.NumberFormat('en', {
+                                                notation: 'compact',
+                                                compactDisplay: 'long'
+                                            }).format(context.parsed.y);
                                         } else {
                                             label += context.parsed.y.toString();
                                         }
@@ -594,6 +734,24 @@
                     client{
                       email
                     }
+                  }
+                }
+            `;
+            const topRatedQuery = `
+                {
+                  topRated(limit: 10){
+                    name
+                    ratings
+                    ratesCount
+                  }
+                }
+            `;
+            const leastRatedQuery = `
+                {
+                  leastRated(limit: 10){
+                    name
+                    ratings
+                    ratesCount
                   }
                 }
             `;
@@ -741,6 +899,24 @@
                             </tr>
                         `
                     )[0]);
+                }
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topRatedQuery}), (data) => {
+                if (data.data.topRated.length > 0) {
+                    const topTen = data.data.topRated;
+                    topRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
+                    topRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
+                    topRatedChart.data.labels = topTen.map(product => product.name);
+                    topRatedChart.update();
+                }
+            });
+            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastRatedQuery}), (data) => {
+                if (data.data.leastRated.length > 0) {
+                    const topTen = data.data.leastRated;
+                    worstRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
+                    worstRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
+                    worstRatedChart.data.labels = topTen.map(product => product.name);
+                    worstRatedChart.update();
                 }
             });
         })();

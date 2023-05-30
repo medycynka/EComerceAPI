@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import F, Q, QuerySet, Avg
+from django.db.models import F, Q, QuerySet, Avg, Count
 from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Cast
@@ -145,7 +145,8 @@ class ProductManager(models.Manager):
         Get products annotated with average ratings
         """
         return self.get_queryset().prefetch_related('productrating_set').annotate(
-            ratings=Coalesce(Avg('productrating__rating'), Cast(0.0, models.FloatField()))
+            ratings=Coalesce(Avg('productrating__rating'), Cast(0.0, models.FloatField())),
+            rates_count=Count('productrating__rating')
         )
 
     def n_star_rating(self, stars: Union[Tuple[float, float], List[float]]) -> QuerySet:
@@ -223,6 +224,12 @@ class ProductManager(models.Manager):
         if with_half:
             return self.n_star_rating((4.5, 5.0))
         return self.n_star_rating((4.5 + self.EPSILON, 5.0))
+
+    def with_views(self) -> QuerySet:
+        """
+        Get products annotated with number of views
+        """
+        return self.get_queryset().prefetch_related('productview_set').annotate(views=Count('productview'))
 
 
 class OrderManager(SoftDeleteManager):
