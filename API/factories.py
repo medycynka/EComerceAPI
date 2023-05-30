@@ -12,6 +12,7 @@ from faker import Faker
 
 from API.models import ProductCategory
 from API.models import Product
+from API.models import ProductRating
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
@@ -24,6 +25,8 @@ from string import ascii_letters, digits
 
 
 fake = Faker(settings.LANGUAGE_CODE)
+
+RATINGS = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
 
 
 def get_random_string(part_length: int = 4, parts: int = 1, parts_join: str = '-',
@@ -94,6 +97,18 @@ class ProductFactory(DjangoModelFactory):
     seller = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_SELLER_GROUP_NAME))
     category = factory.Iterator(ProductCategory.objects.all())
     stock = factory.LazyFunction(lambda: random.randint(0, 10000))
+
+
+class ProductRatingFactory(DjangoModelFactory):
+    """:model:`API.Product` factory."""
+
+    class Meta:
+        model = ProductRating
+
+    product = factory.Iterator(Product.objects.all().only('id'))
+    reviewer = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_CLIENT_GROUP_NAME))
+    review = factory.LazyFunction(lambda: fake.sentence(nb_words=16))
+    rating = factory.LazyFunction(lambda: random.choice(RATINGS))
 
 
 class AddressFactory(DjangoModelFactory):

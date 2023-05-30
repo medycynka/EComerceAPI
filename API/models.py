@@ -125,6 +125,7 @@ class ProductRating(models.Model):
     rating = models.FloatField(verbose_name=_("Rating"), blank=True, default=0.0, validators=[
         MinValueValidator(0.0), MaxValueValidator(5.0)
     ])
+    created_at = models.DateTimeField(verbose_name=_("Order date"), auto_now_add=True)
 
     class Meta:
         db_table = 'API_product_rating'

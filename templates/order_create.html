@@ -243,8 +243,8 @@
                         contentType : 'application/json',
                         success: (data, textStatus, jqXHR) => {
                             Swal.fire({
-                                title: 'Przyjęto zamówienie!',
-                                html: `Twoje zamówienie o łącznym koszcie <b>${data.total_product_price}</b> PLN i terminie płatności do <b>${data.payment_date}</b> zostało przyjęte do realizacji.`,
+                                title: 'Order accepted!',
+                                html: `Your order with a total cost of <b>${data.total_product_price}</b> PLN and a payment deadline of <b>${data.payment_date}</b> has been accepted for processing.`,
                                 icon: 'success',
                                 allowEscapeKey: false,
                                 allowOutsideClick: false

@@ -82,17 +82,23 @@ class ProductRatingSerializer(ModelSerializer):
 
     class Meta:
         model = ProductRating
-        fields = ('id', 'product', 'rating', 'reviewer', 'review')
+        fields = ('id', 'product', 'rating', 'reviewer', 'review', 'created_at')
         read_only_fields = fields
 
 
 class ProductRatingCreateSerializer(ModelSerializer):
     class Meta:
         model = ProductRating
-        fields = ('id', 'product', 'rating', 'review')
-        read_only_fields = ('id',)
+        fields = ('id', 'product', 'rating', 'review', 'created_at')
+        read_only_fields = ('id', 'created_at')
 
     def create(self, validated_data):
+        reviewer = self.context['request'].user
+        users_ratings = ProductRating.objects.filter(reviewer=reviewer, product=validated_data['product'])
+
+        if users_ratings.exists():
+            return users_ratings.first()
+
         validated_data['reviewer'] = self.context['request'].user
 
         return super().create(validated_data)

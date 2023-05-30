@@ -103,14 +103,16 @@ class ProductModelViewSet(ModelViewSet):
     @action(methods=['get'], detail=True, url_path='ratings', url_name='ratings')
     def ratings(self, request, pk=None):
         product = self.get_object()
-        page = self.paginate_queryset(product.productrating_set.all())
+        page = self.paginate_queryset(product.productrating_set.all().order_by('-created_at'))
 
         if page is not None:
             serializer = ProductRatingSerializer(page, many=True)
 
             return self.get_paginated_response(serializer.data)
 
-        return Response(ProductRatingSerializer(product.productrating_set.all(), many=True).data)
+        return Response(
+            ProductRatingSerializer(product.productrating_set.all().order_by('-created_at'), many=True).data
+        )
 
 
 class ProductRatingsModelViewSet(ModelViewSet):

@@ -114,7 +114,7 @@
     <!-- INTERNAL ion.rangeSlider.min js -->
     <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
 
-    <!-- -->
+    <!-- BOOTSTRAP TREEVIEW JS-->
     <script src="{% static 'assets/plugins/bootstrap-treeview-1.2.0/src/js/bootstrap-treeview.min.js' %}"></script>
 
     <script>
@@ -212,7 +212,7 @@
                 const rating = productRating || getRandomRating();
                 const fullStars = Number(rating[0]);
                 const haveHalfStart = rating[rating.length - 1] === '5';
-                return '<i class="fa fa-star"></i>'.repeat(fullStars) + (haveHalfStart ? '<i class="fa fa-star-half-o"></i>' + '<i class="fa fa-star-o"></i>'.repeat(4 - fullStars) : '<i class="fa fa-star-o"></i>'.repeat(5 - fullStars))
+                return '<i class="fa fa-star"></i>'.repeat(fullStars) + (haveHalfStart ? '<i class="fa fa-star-half-o"></i>' + '<i class="fa fa-star-o"></i>'.repeat(Math.max(0, 4 - fullStars)) : '<i class="fa fa-star-o"></i>'.repeat(5 - fullStars))
             };
 
             categorySelect.select2({});
