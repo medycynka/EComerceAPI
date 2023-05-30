@@ -11,6 +11,7 @@ from django_countries.serializer_fields import CountryField
 
 from API.models import ProductCategory
 from API.models import Product
+from API.models import ProductRating
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
@@ -76,13 +77,41 @@ class ProductCategoryManageSerializer(ModelSerializer):
         read_only_fields = ('id',)
 
 
+class ProductRatingSerializer(ModelSerializer):
+    reviewer = UserSerializer()
+
+    class Meta:
+        model = ProductRating
+        fields = ('id', 'product', 'rating', 'reviewer', 'review', 'created_at')
+        read_only_fields = fields
+
+
+class ProductRatingCreateSerializer(ModelSerializer):
+    class Meta:
+        model = ProductRating
+        fields = ('id', 'product', 'rating', 'review', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+    def create(self, validated_data):
+        reviewer = self.context['request'].user
+        users_ratings = ProductRating.objects.filter(reviewer=reviewer, product=validated_data['product'])
+
+        if users_ratings.exists():
+            return users_ratings.first()
+
+        validated_data['reviewer'] = self.context['request'].user
+
+        return super().create(validated_data)
+
+
 class ProductSerializer(ModelSerializer):
     category = ProductCategorySerializer()
     seller = UserSerializer()
+    ratings = serializers.ReadOnlyField(source='get_ratings')
 
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
+        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock', 'ratings')
         read_only_fields = fields
 
 

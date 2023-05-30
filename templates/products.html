@@ -114,7 +114,7 @@
     <!-- INTERNAL ion.rangeSlider.min js -->
     <script src="{% static 'assets/plugins/ion-rangeslider/js/ion.rangeSlider.min.js' %}"></script>
 
-    <!-- -->
+    <!-- BOOTSTRAP TREEVIEW JS-->
     <script src="{% static 'assets/plugins/bootstrap-treeview-1.2.0/src/js/bootstrap-treeview.min.js' %}"></script>
 
     <script>
@@ -204,6 +204,16 @@
 
                 return ids;
             };
+            const roundToStep = (value, step=0.5) => Math.round(value / step) * step;
+            const getRandomRating = (
+                ratings=['0.0', '0.5', '1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0']
+            ) => ratings[ratings.length * Math.random() | 0];
+            const generateRandomStarRating = (productRating=null) => {
+                const rating = productRating || getRandomRating();
+                const fullStars = Number(rating[0]);
+                const haveHalfStart = rating[rating.length - 1] === '5';
+                return '<i class="fa fa-star"></i>'.repeat(fullStars) + (haveHalfStart ? '<i class="fa fa-star-half-o"></i>' + '<i class="fa fa-star-o"></i>'.repeat(Math.max(0, 4 - fullStars)) : '<i class="fa fa-star-o"></i>'.repeat(5 - fullStars))
+            };
 
             categorySelect.select2({});
             orderSelect.select2({
@@ -256,11 +266,7 @@
                                     </div>
                                     <div class="product-content text-center">
                                         <div class="text-center mb-2 text-warning">
-                                            <i class="fa fa-star"></i>
-                                            <i class="fa fa-star"></i>
-                                            <i class="fa fa-star"></i>
-                                            <i class="fa fa-star"></i>
-                                            <i class="fa fa-star-half-o"></i>
+                                            ${generateRandomStarRating(roundToStep(products[i].ratings).toString())}
                                         </div>
                                         <h4 class="title"><a href="javascript:void(0);">${products[i].name}</a></h4>
                                         <h6 style="min-height: 30px;">${products[i].category.name}</h6>
@@ -332,8 +338,6 @@
                 for (let i = 0; i < data.length; i++) {
                     tree[0].nodes.push(formatCategory(data[i]));
                 }
-
-                console.log(tree);
 
                 categoryTree.treeview({
                     data: tree,

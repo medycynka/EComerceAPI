@@ -6,8 +6,8 @@
  * -------------------------- */
 @font-face {
   font-family: 'FontAwesome';
-  src: url('font/fontawesome-webfont.eot?v=4.7.0');
-  src: url('font/fontawesome-webfont.eot?#iefix&v=4.7.0') format('embedded-opentype'), url('font/fontawesome-webfont.woff2?v=4.7.0') format('woff2'), url('font/fontawesome-webfont.woff?v=4.7.0') format('woff'), url('font/fontawesome-webfont.ttf?v=4.7.0') format('truetype'), url('font/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular') format('svg');
+  src: url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.eot?v=4.7.0');
+  src: url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.eot?#iefix&v=4.7.0') format('embedded-opentype'), url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.woff2?v=4.7.0') format('woff2'), url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.woff?v=4.7.0') format('woff'), url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.ttf?v=4.7.0') format('truetype'), url('/static/assets/plugins/iconfonts/font/fontawesome-webfont.svg?v=4.7.0#fontawesomeregular') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -2354,7 +2354,7 @@
  */
 @font-face {
   font-family: 'Material-Design-Iconic-Font';
-  src: url("font/Material-Design-Iconic-Font.woff2?v=2.2.0") format("woff2"), url("font/Material-Design-Iconic-Font.woff?v=2.2.0") format("woff"), url("font/Material-Design-Iconic-Font.ttf?v=2.2.0") format("truetype");
+  src: url("/static/assets/plugins/iconfonts/font/Material-Design-Iconic-Font.woff2?v=2.2.0") format("woff2"), url("/static/assets/plugins/iconfonts/font/Material-Design-Iconic-Font.woff?v=2.2.0") format("woff"), url("/static/assets/plugins/iconfonts/font/Material-Design-Iconic-Font.ttf?v=2.2.0") format("truetype");
   font-weight: normal;
   font-style: normal; }
 .zmdi {
@@ -7510,8 +7510,8 @@
 
 @font-face {
   font-family: 'themify';
-  src: url("font/themify.eot?-fvbane");
-  src: url("font/themify.eot?#iefix-fvbane") format("embedded-opentype"), url("font/themify.woff?-fvbane") format("woff"), url("font/themify.ttf?-fvbane") format("truetype"), url("font/themify.svg?-fvbane#themify") format("svg");
+  src: url("/static/assets/plugins/iconfonts/font/themify.eot?-fvbane");
+  src: url("/static/assets/plugins/iconfonts/font/themify.eot?#iefix-fvbane") format("embedded-opentype"), url("/static/assets/plugins/iconfonts/font/themify.woff?-fvbane") format("woff"), url("/static/assets/plugins/iconfonts/font/themify.ttf?-fvbane") format("truetype"), url("/static/assets/plugins/iconfonts/font/themify.svg?-fvbane#themify") format("svg");
   font-weight: normal;
   font-style: normal; }
 [class^="ti-"], [class*=" ti-"] {
@@ -8584,8 +8584,8 @@
 
 @font-face {
   font-family: "simple-line-icons";
-  src: url("fonts/Simple-Line-Icons.eot?-i3a2kk");
-  src: url("fonts/Simple-Line-Icons.eot?#iefix-i3a2kk") format("embedded-opentype"), url("fonts/Simple-Line-Icons.ttf?-i3a2kk") format("truetype"), url("fonts/Simple-Line-Icons.woff2?-i3a2kk") format("woff2"), url("fonts/Simple-Line-Icons.woff?-i3a2kk") format("woff"), url("fonts/Simple-Line-Icons.svg?-i3a2kk#simple-line-icons") format("svg");
+  src: url("fonts/simple-line-icons/Simple-Line-Icons.eot?-i3a2kk");
+  src: url("fonts/simple-line-icons/Simple-Line-Icons.eot?#iefix-i3a2kk") format("embedded-opentype"), url("fonts/simple-line-icons/Simple-Line-Icons.ttf?-i3a2kk") format("truetype"), url("fonts/simple-line-icons/Simple-Line-Icons.woff2?-i3a2kk") format("woff2"), url("fonts/simple-line-icons/Simple-Line-Icons.woff?-i3a2kk") format("woff"), url("fonts/simple-line-icons/Simple-Line-Icons.svg?-i3a2kk#simple-line-icons") format("svg");
   font-weight: normal;
   font-style: normal; }
 .icon-user, .icon-people, .icon-user-female, .icon-user-follow, .icon-user-following, .icon-user-unfollow, .icon-login, .icon-logout, .icon-emotsmile, .icon-phone, .icon-call-end, .icon-call-in, .icon-call-out, .icon-map, .icon-location-pin, .icon-direction, .icon-directions, .icon-compass, .icon-layers, .icon-menu, .icon-list, .icon-options-vertical, .icon-options, .icon-arrow-down, .icon-arrow-left, .icon-arrow-right, .icon-arrow-up, .icon-arrow-up-circle, .icon-arrow-left-circle, .icon-arrow-right-circle, .icon-arrow-down-circle, .icon-check, .icon-clock, .icon-plus, .icon-close, .icon-trophy, .icon-screen-smartphone, .icon-screen-desktop, .icon-plane, .icon-notebook, .icon-mustache, .icon-mouse, .icon-magnet, .icon-energy, .icon-disc, .icon-cursor, .icon-cursor-move, .icon-crop, .icon-chemistry, .icon-speedometer, .icon-shield, .icon-screen-tablet, .icon-magic-wand, .icon-hourglass, .icon-graduation, .icon-ghost, .icon-game-controller, .icon-fire, .icon-eyeglass, .icon-envelope-open, .icon-envelope-letter, .icon-bell, .icon-badge, .icon-anchor, .icon-wallet, .icon-vector, .icon-speech, .icon-puzzle, .icon-printer, .icon-present, .icon-playlist, .icon-pin, .icon-picture, .icon-handbag, .icon-globe-alt, .icon-globe, .icon-folder-alt, .icon-folder, .icon-film, .icon-feed, .icon-drop, .icon-drawar, .icon-docs, .icon-doc, .icon-diamond, .icon-cup, .icon-calculator, .icon-bubbles, .icon-briefcase, .icon-book-open, .icon-basket-loaded, .icon-basket, .icon-bag, .icon-action-undo, .icon-action-redo, .icon-wrench, .icon-umbrella, .icon-trash, .icon-tag, .icon-support, .icon-frame, .icon-size-fullscreen, .icon-size-actual, .icon-shuffle, .icon-share-alt, .icon-share, .icon-rocket, .icon-question, .icon-pie-chart, .icon-pencil, .icon-note, .icon-loop, .icon-home, .icon-grid, .icon-graph, .icon-microphone, .icon-music-tone-alt, .icon-music-tone, .icon-earphones-alt, .icon-earphones, .icon-equalizer, .icon-like, .icon-dislike, .icon-control-start, .icon-control-rewind, .icon-control-play, .icon-control-pause, .icon-control-forward, .icon-control-end, .icon-volume-1, .icon-volume-2, .icon-volume-off, .icon-calender, .icon-bulb, .icon-chart, .icon-ban, .icon-bubble, .icon-camrecorder, .icon-camera, .icon-cloud-download, .icon-cloud-upload, .icon-envelope, .icon-eye, .icon-flag, .icon-heart, .icon-info, .icon-key, .icon-link, .icon-lock, .icon-lock-open, .icon-magnifier, .icon-magnifier-add, .icon-magnifier-remove, .icon-paper-clip, .icon-paper-plane, .icon-power, .icon-refresh, .icon-reload, .icon-settings, .icon-star, .icon-symble-female, .icon-symbol-male, .icon-target, .icon-credit-card, .icon-paypal, .icon-social-tumblr, .icon-social-twitter, .icon-social-facebook, .icon-social-instagram, .icon-social-linkedin, .icon-social-pintarest, .icon-social-github, .icon-social-gplus, .icon-social-reddit, .icon-social-skype, .icon-social-dribbble, .icon-social-behance, .icon-social-foursqare, .icon-social-soundcloud, .icon-social-spotify, .icon-social-stumbleupon, .icon-social-youtube, .icon-social-dropbox {
@@ -9157,8 +9157,8 @@
 */
 @font-face {
   font-family: "Ionicons";
-  src: url("font/ionicons.eot?v=1.5.0");
-  src: url("font/ionicons.eot?v=1.5.0#iefix") format("embedded-opentype"), url("font/ionicons.ttf?v=1.5.0") format("truetype"), url("font/ionicons.woff?v=1.5.0") format("woff"), url("font/ionicons.svg?v=1.5.0#Ionicons") format("svg");
+  src: url("/static/assets/plugins/iconfonts/font/ionicons.eot?v=1.5.0");
+  src: url("/static/assets/plugins/iconfonts/font/ionicons.eot?v=1.5.0#iefix") format("embedded-opentype"), url("/static/assets/plugins/iconfonts/font/ionicons.ttf?v=1.5.0") format("truetype"), url("/static/assets/plugins/iconfonts/font/ionicons.woff?v=1.5.0") format("woff"), url("/static/assets/plugins/iconfonts/font/ionicons.svg?v=1.5.0#Ionicons") format("svg");
   font-weight: normal;
   font-style: normal; }
 .ion, .ion-loading-a,
@@ -11650,8 +11650,8 @@
  */
 @font-face {
   font-family: "weathericons";
-  src: url("font/weathericons-regular-webfont.eot");
-  src: url("font/weathericons-regular-webfont.eot?#iefix") format("embedded-opentype"), url("font/weathericons-regular-webfont.woff2") format("woff2"), url("fonts/weathericons-regular-webfont.woff") format("woff"), url("font/weathericons-regular-webfont.ttf") format("truetype"), url("font/weathericons-regular-webfont.svg#weather_iconsregular") format("svg");
+  src: url("/static/assets/plugins/iconfonts/font/weathericons-regular-webfont.eot");
+  src: url("/static/assets/plugins/iconfonts/font/weathericons-regular-webfont.eot?#iefix") format("embedded-opentype"), url("/static/assets/plugins/iconfonts/font/weathericons-regular-webfont.woff2") format("woff2"), url("fonts/weathericons/weathericons-regular-webfont.woff") format("woff"), url("/static/assets/plugins/iconfonts/font/weathericons-regular-webfont.ttf") format("truetype"), url("/static/assets/plugins/iconfonts/font/weathericons-regular-webfont.svg#weather_iconsregular") format("svg");
   font-weight: normal;
   font-style: normal; }
 .wi {
@@ -13416,8 +13416,8 @@
   font-family: 'typicons';
   font-weight: normal;
   font-style: normal;
-  src: url("font/typicons.eot");
-  src: url("font/typicons.eot?#iefix") format("embedded-opentype"), url("font/typicons.woff") format("woff"), url("font/typicons.ttf") format("truetype"), url("font/typicons.svg#typicons") format("svg"); }
+  src: url("/static/assets/plugins/iconfonts/font/typicons.eot");
+  src: url("/static/assets/plugins/iconfonts/font/typicons.eot?#iefix") format("embedded-opentype"), url("/static/assets/plugins/iconfonts/font/typicons.woff") format("woff"), url("/static/assets/plugins/iconfonts/font/typicons.ttf") format("truetype"), url("/static/assets/plugins/iconfonts/font/typicons.svg#typicons") format("svg"); }
 /* :before psuedo-selector inserts and styles icon */
 .typcn:before {
   font-family: 'typicons';
@@ -14782,8 +14782,8 @@
 
 @font-face {
   font-family: 'Pe-icon-7-stroke';
-  src: url("font/Pe-icon-7-stroke.eot?d7yf1v");
-  src: url("font/Pe-icon-7-stroke.eot?#iefixd7yf1v") format("embedded-opentype"), url("font/Pe-icon-7-stroke.woff?d7yf1v") format("woff"), url("font/Pe-icon-7-stroke.ttf?d7yf1v") format("truetype"), url("font/Pe-icon-7-stroke.svg?d7yf1v#Pe-icon-7-stroke") format("svg");
+  src: url("/static/assets/plugins/iconfonts/font/Pe-icon-7-stroke.eot?d7yf1v");
+  src: url("/static/assets/plugins/iconfonts/font/Pe-icon-7-stroke.eot?#iefixd7yf1v") format("embedded-opentype"), url("/static/assets/plugins/iconfonts/font/Pe-icon-7-stroke.woff?d7yf1v") format("woff"), url("/static/assets/plugins/iconfonts/font/Pe-icon-7-stroke.ttf?d7yf1v") format("truetype"), url("/static/assets/plugins/iconfonts/font/Pe-icon-7-stroke.svg?d7yf1v#Pe-icon-7-stroke") format("svg");
   font-weight: normal;
   font-style: normal; }
 [class^="pe-7s-"], [class*=" pe-7s-"] {
