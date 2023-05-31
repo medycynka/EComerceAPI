@@ -17,6 +17,13 @@
     {% csrf_token %}
 {% endblock %}
 {% block page_header_buttons %}
+    {% if request.user|is_seller or request.user.is_superuser %}
+        <div class="ms-auto pageheader-btn">
+            <button type="button" class="btn btn-success btn-icon text-white me-2" id="statsRefreshBtn">
+                <span><i class="fe fe-refresh-cw"></i></span> Refresh Stats
+            </button>
+        </div>
+    {% endif %}
 {% endblock %}
 {% block page_content %}
     <div class="row">
@@ -681,7 +688,7 @@
             };
             const topSellersQuery = `
                 {
-                  topSellers {
+                  productsStatistic(orderBy: "-sells_count"){
                     name
                     sellsCount
                     price
@@ -690,7 +697,7 @@
             `;
             const leastSellersQuery = `
                 {
-                  leastSellers {
+                  productsStatistic(limit: 10, orderBy: "sells_count;-price"){
                     name
                     sellsCount
                     price
@@ -739,7 +746,7 @@
             `;
             const topRatedQuery = `
                 {
-                  topRated(limit: 10){
+                  productsStatistic(limit: 10, orderBy: "-ratings;-rates_count"){
                     name
                     ratings
                     ratesCount
@@ -748,7 +755,7 @@
             `;
             const leastRatedQuery = `
                 {
-                  leastRated(limit: 10){
+                  productsStatistic(limit: 10, orderBy: "ratings;-rates_count"){
                     name
                     ratings
                     ratesCount
@@ -756,169 +763,175 @@
                 }
             `;
 
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: monthlySalesQuery}), (data) => {
-                const monthlySales = data.data.monthlySalesAndProfits;
-                if (monthlySales.length > 0) {
-                    for (let i = 0; i < monthlySales.length; i++) {
-                        monthlySellsChart.data.datasets[0].data[monthlySales[i].month - 1] = monthlySales[i].sales;
-                        monthlySellsChart.data.datasets[1].data[monthlySales[i].month - 1] = Number(monthlySales[i].profits) / 1000;
+            const refreshData = () => {
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: monthlySalesQuery}), (data) => {
+                    const monthlySales = data.data.monthlySalesAndProfits;
+                    if (monthlySales.length > 0) {
+                        for (let i = 0; i < monthlySales.length; i++) {
+                            monthlySellsChart.data.datasets[0].data[monthlySales[i].month - 1] = monthlySales[i].sales;
+                            monthlySellsChart.data.datasets[1].data[monthlySales[i].month - 1] = Number(monthlySales[i].profits) / 1000;
+                        }
+                        monthlySellsChart.update();
                     }
-                    monthlySellsChart.update();
-                }
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topSellersQuery}), (data) => {
-                if (data.data.topSellers.length > 0) {
-                    const topTen = data.data.topSellers.slice(0, 9);
-                    topSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
-                    topSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
-                    topSellersChart.data.labels = topTen.map(product => product.name);
-                    topSellersChart.update();
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topSellersQuery}), (data) => {
+                    if (data.data.productsStatistic.length > 0) {
+                        const topTen = data.data.productsStatistic.slice(0, 9);
+                        topSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
+                        topSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
+                        topSellersChart.data.labels = topTen.map(product => product.name);
+                        topSellersChart.update();
 
-                    const initialSum = 0;
-                    const sellsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum);
-                    const profitsSumWithInitial = data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum);
+                        const initialSum = 0;
+                        const sellsSumWithInitial = data.data.productsStatistic.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum);
+                        const profitsSumWithInitial = data.data.productsStatistic.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum);
+                        const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
+
+                        document.getElementById('totalSales').innerHTML = formatter.format(sellsSumWithInitial);
+
+                        document.getElementById('topSellingProduct').innerHTML = topTen[0].name;
+                        document.getElementById('topSellingProductProfit').innerHTML = `${formatter.format(topTen[0].sellsCount * Number(topTen[0].price))} PLN`;
+
+                        document.getElementById('totalProfit').innerHTML = `${formatter.format(profitsSumWithInitial)} PLN`;
+
+                        const currentMonthSalesQuery = `
+                            {
+                              productsStatistic(dateFrom: "${moment().startOf('month').format('YYYY-MM-DD hh:mm:ss')}", dateTo: "${moment().endOf('month').format('YYYY-MM-DD hh:mm:ss')}", orderBy: "-sells_count"){
+                                name
+                                sellsCount
+                                price
+                              }
+                            }
+                        `;
+
+                        getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: currentMonthSalesQuery}), (data) => {
+                            const initialSum = 0;
+
+                            document.getElementById('totalSalesThisMonth').innerHTML = formatter.format(data.data.productsStatistic.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum));
+
+                            document.getElementById('totalProfitThisMonth').innerHTML = `${formatter.format(data.data.productsStatistic.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum))} PLN`;
+                        });
+                    }
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastSellersQuery}), (data) => {
+                    if (data.data.productsStatistic.length > 0) {
+                        const topTen = data.data.productsStatistic;
+                        leastSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
+                        leastSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
+                        leastSellersChart.data.labels = topTen.map(product => product.name);
+                        leastSellersChart.update();
+                    }
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
+                    const paid = data.data.allOrders.filter(order => order.isPaid).length;
+                    const unpaid = data.data.allOrders.length - paid;
                     const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
 
-                    document.getElementById('totalSales').innerHTML = formatter.format(sellsSumWithInitial);
+                    recentOrdersChart.data.datasets[0].data = [
+                        paid,
+                        unpaid
+                    ];
+                    recentOrdersChart.update();
 
-                    document.getElementById('topSellingProduct').innerHTML = topTen[0].name;
-                    document.getElementById('topSellingProductProfit').innerHTML = `${formatter.format(topTen[0].sellsCount * Number(topTen[0].price))} PLN`;
-
-                    document.getElementById('totalProfit').innerHTML = `${formatter.format(profitsSumWithInitial)} PLN`;
-
-                    const currentMonthSalesQuery = `
-                        {
-                          topSellers(dateFrom: "${moment().startOf('month').format('YYYY-MM-DD hh:mm:ss')}", dateTo: "${moment().endOf('month').format('YYYY-MM-DD hh:mm:ss')}") {
-                            name
-                            price
-                            sellsCount
-                          }
+                    document.getElementById('paidOrders').innerHTML = formatter.format(paid);
+                    document.getElementById('unpaidOrders').innerHTML = formatter.format(unpaid);
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: countrySalesQuery}), (data) => {
+                    $(function() {
+                        const salesAndProfits = {};
+                        const countriesNormalized = {};
+                        const countryData = data.data.countrySalesAndProfits;
+                        const topCountriesTableRows = document.querySelector('table#topCountries>tbody').children;
+                        const countryCodesFormatter = new Intl.DisplayNames(['en'], {type: 'region'});
+                        const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
+                        for (let i = 0; i < countryData.length; i++) {
+                            const countryCode = countryData[i].country !== 'en' ? countryData[i].country.toUpperCase() : 'GB';
+                            salesAndProfits[countryCode] = {sales: countryData[i].sales, profits: countryData[i].profits};
+                            countriesNormalized[countryCode] = countryData[i].profits;
+                            if (i < 10){
+                                const currentRowChildren = topCountriesTableRows[i].children;
+                                currentRowChildren[1].innerHTML = countryCodesFormatter.of(countryData[i].country);
+                                currentRowChildren[2].innerHTML = bigNumbersFormatter.format(countryData[i].sales);
+                                currentRowChildren[3].innerHTML = bigNumbersFormatter.format(countryData[i].profits) + ' PLN';
+                            }
                         }
-                    `;
-
-                    getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: currentMonthSalesQuery}), (data) => {
-                        const initialSum = 0;
-
-                        document.getElementById('totalSalesThisMonth').innerHTML = formatter.format(data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount, initialSum));
-
-                        document.getElementById('totalProfitThisMonth').innerHTML = `${formatter.format(data.data.topSellers.reduce((accumulator, currentValue) => accumulator + currentValue.sellsCount * Number(currentValue.price), initialSum))} PLN`;
-                    });
-                }
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastSellersQuery}), (data) => {
-                if (data.data.leastSellers.length > 0) {
-                    const topTen = data.data.leastSellers.slice(0, 9);
-                    leastSellersChart.data.datasets[0].data = topTen.map(product => product.sellsCount);
-                    leastSellersChart.data.datasets[1].data = topTen.map(product => product.sellsCount * Number(product.price) / 1000);
-                    leastSellersChart.data.labels = topTen.map(product => product.name);
-                    leastSellersChart.update();
-                }
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: ordersQuery}), (data) => {
-                const paid = data.data.allOrders.filter(order => order.isPaid).length;
-                const unpaid = data.data.allOrders.length - paid;
-                const formatter = Intl.NumberFormat('en', { notation: 'compact', compactDisplay: 'long' });
-
-                recentOrdersChart.data.datasets[0].data = [
-                    paid,
-                    unpaid
-                ];
-                recentOrdersChart.update();
-
-                document.getElementById('paidOrders').innerHTML = formatter.format(paid);
-                document.getElementById('unpaidOrders').innerHTML = formatter.format(unpaid);
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: countrySalesQuery}), (data) => {
-                $(function() {
-                    const salesAndProfits = {};
-                    const countriesNormalized = {};
-                    const countryData = data.data.countrySalesAndProfits;
-                    const topCountriesTableRows = document.querySelector('table#topCountries>tbody').children;
-                    const countryCodesFormatter = new Intl.DisplayNames(['en'], {type: 'region'});
-                    const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
-                    for (let i = 0; i < countryData.length; i++) {
-                        const countryCode = countryData[i].country !== 'en' ? countryData[i].country.toUpperCase() : 'GB';
-                        salesAndProfits[countryCode] = {sales: countryData[i].sales, profits: countryData[i].profits};
-                        countriesNormalized[countryCode] = countryData[i].profits;
-                        if (i < 10){
-                            const currentRowChildren = topCountriesTableRows[i].children;
-                            currentRowChildren[1].innerHTML = countryCodesFormatter.of(countryData[i].country);
-                            currentRowChildren[2].innerHTML = bigNumbersFormatter.format(countryData[i].sales);
-                            currentRowChildren[3].innerHTML = bigNumbersFormatter.format(countryData[i].profits) + ' PLN';
-                        }
-                    }
-                    const countrySales = $('#world-map-sales').vectorMap({
-                        map: 'world_mill_en',
-                        series: {
-                            regions: [{
-                                values: countriesNormalized,
-                                scale: ['#C8EEFF', '#0071A4'],
-                                normalizeFunction: 'polynomial',
-                                attribute: 'fill',
-                                legend: {
-                                    vertical: true,
-                                    title: 'Profits',
-                                    labelRender: function (value) {
-                                        return new Intl.NumberFormat('en', {
-                                            notation: 'compact',
-                                            compactDisplay: 'long'
-                                        }).format(value) + ' PLN'
-                                    }
-                                },
-                            }]
-                        },
-                        onRegionTipShow: function (e, el, code) {
-                            const formatter = new Intl.NumberFormat('en', {
-                                notation: 'compact',
-                                compactDisplay: 'long'
-                            });
-                            const data = salesAndProfits[code];
-                            const sales = formatter.format(data ? data.sales : 0);
-                            const profits = formatter.format(data ? data.profits : 0);
-                            el.html(el.html() + ' - Sales: ' + sales + ' Profits: ' + profits + ' PLN');
-                        }
+                        const countrySales = $('#world-map-sales').vectorMap({
+                            map: 'world_mill_en',
+                            series: {
+                                regions: [{
+                                    values: countriesNormalized,
+                                    scale: ['#C8EEFF', '#0071A4'],
+                                    normalizeFunction: 'polynomial',
+                                    attribute: 'fill',
+                                    legend: {
+                                        vertical: true,
+                                        title: 'Profits',
+                                        labelRender: function (value) {
+                                            return new Intl.NumberFormat('en', {
+                                                notation: 'compact',
+                                                compactDisplay: 'long'
+                                            }).format(value) + ' PLN'
+                                        }
+                                    },
+                                }]
+                            },
+                            onRegionTipShow: function (e, el, code) {
+                                const formatter = new Intl.NumberFormat('en', {
+                                    notation: 'compact',
+                                    compactDisplay: 'long'
+                                });
+                                const data = salesAndProfits[code];
+                                const sales = formatter.format(data ? data.sales : 0);
+                                const profits = formatter.format(data ? data.profits : 0);
+                                el.html(el.html() + ' - Sales: ' + sales + ' Profits: ' + profits + ' PLN');
+                            }
+                        });
                     });
                 });
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: recentOrdersQuery}), (data) => {
-                const recentOrdersTable = document.querySelector('table#recentOrders>tbody');
-                const recentOrders = data.data.allOrders;
-                const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: recentOrdersQuery}), (data) => {
+                    const recentOrdersTable = document.querySelector('table#recentOrders>tbody');
+                    const recentOrders = data.data.allOrders;
+                    const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
 
-                for (let i = 0; i < recentOrders.length; i++) {
-                    recentOrdersTable.appendChild($(
-                        `
-                            <tr>
-                                <td>${recentOrders[i].id}</td>
-                                <td>${recentOrders[i].client.email}</td>
-                                <td>${bigNumbersFormatter.format(recentOrders[i].fullPrice)} PLN</td>
-                                <td>${(recentOrders[i].discount * 100).toFixed(0)}%</td>
-                                <td>${bigNumbersFormatter.format(recentOrders[i].finalPrice)} PLN</td>
-                                <td>${recentOrders[i].statusName}</td>
-                                <td>${moment(recentOrders[i].orderDate).format('DD-MM-YYYY hh:mm:ss')}</td>
-                            </tr>
-                        `
-                    )[0]);
-                }
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topRatedQuery}), (data) => {
-                if (data.data.topRated.length > 0) {
-                    const topTen = data.data.topRated;
-                    topRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
-                    topRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
-                    topRatedChart.data.labels = topTen.map(product => product.name);
-                    topRatedChart.update();
-                }
-            });
-            getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastRatedQuery}), (data) => {
-                if (data.data.leastRated.length > 0) {
-                    const topTen = data.data.leastRated;
-                    worstRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
-                    worstRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
-                    worstRatedChart.data.labels = topTen.map(product => product.name);
-                    worstRatedChart.update();
-                }
-            });
+                    for (let i = 0; i < recentOrders.length; i++) {
+                        recentOrdersTable.appendChild($(
+                            `
+                                <tr>
+                                    <td>${recentOrders[i].id}</td>
+                                    <td>${recentOrders[i].client.email}</td>
+                                    <td>${bigNumbersFormatter.format(recentOrders[i].fullPrice)} PLN</td>
+                                    <td>${(recentOrders[i].discount * 100).toFixed(0)}%</td>
+                                    <td>${bigNumbersFormatter.format(recentOrders[i].finalPrice)} PLN</td>
+                                    <td>${recentOrders[i].statusName}</td>
+                                    <td>${moment(recentOrders[i].orderDate).format('DD-MM-YYYY hh:mm:ss')}</td>
+                                </tr>
+                            `
+                        )[0]);
+                    }
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topRatedQuery}), (data) => {
+                    if (data.data.productsStatistic.length > 0) {
+                        const topTen = data.data.productsStatistic;
+                        topRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
+                        topRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
+                        topRatedChart.data.labels = topTen.map(product => product.name);
+                        topRatedChart.update();
+                    }
+                });
+                getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: leastRatedQuery}), (data) => {
+                    if (data.data.productsStatistic.length > 0) {
+                        const topTen = data.data.productsStatistic;
+                        worstRatedChart.data.datasets[0].data = topTen.map(product => product.ratings);
+                        worstRatedChart.data.datasets[1].data = topTen.map(product => product.ratesCount);
+                        worstRatedChart.data.labels = topTen.map(product => product.name);
+                        worstRatedChart.update();
+                    }
+                });
+            };
+
+            document.getElementById('statsRefreshBtn').addEventListener('click', refreshData);
+
+            refreshData();
         })();
     </script>
 {% endblock %}

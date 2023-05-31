@@ -38,15 +38,28 @@ class ProductRatingType(DjangoObjectType):
         fields = ('id', 'product', 'reviewer', 'review', 'rating', 'created_at')
 
 
-class ProductStatisticType(DjangoObjectType):
+class ProductStatisticModelType(DjangoObjectType):
     class Meta:
         model = Product
-        fields = ('id', 'name', 'description', 'price', 'category', 'photo', 'thumbnail', 'seller', 'stock')
+        fields = ('id', 'name', 'price', 'stock')
 
     sells_count = graphene.Int()
     total_profit = graphene.Decimal()
     ratings = graphene.Float()
     rates_count = graphene.Int()
+    views = graphene.Int()
+
+
+class ProductStatisticObjectType(graphene.ObjectType):
+    id = graphene.ID()
+    name = graphene.String()
+    price = graphene.Decimal()
+    stock = graphene.Int()
+    sells_count = graphene.Int()
+    total_profit = graphene.Decimal()
+    ratings = graphene.Float()
+    rates_count = graphene.Int()
+    views = graphene.Int()
 
 
 class AddressType(DjangoObjectType):

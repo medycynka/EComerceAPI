@@ -64,7 +64,7 @@ class ProductManager(models.Manager):
         """
 
         return self.products_by_seller(seller, filter_q).select_related('category').prefetch_related(
-            'orderproductlistitem_set__order'
+            'orderproductlistitem_set'
         ).annotate(
             sells_count=Coalesce(
                 models.Sum('orderproductlistitem__quantity'),
@@ -230,6 +230,24 @@ class ProductManager(models.Manager):
         Get products annotated with number of views
         """
         return self.get_queryset().prefetch_related('productview_set').annotate(views=Count('productview'))
+
+    def full_stats(self, filter_q: Q = None) -> QuerySet:
+        q = self.get_queryset()
+
+        if filter_q:
+            q = q.filter(filter_q)
+
+        return q.prefetch_related('orderproductlistitem_set', 'productrating_set', 'productview_set').annotate(
+            sells_count=Coalesce(models.Sum('orderproductlistitem__quantity'), Cast(0, models.PositiveIntegerField())),
+            total_profit=Coalesce(
+                F('price') * Cast(F('sells_count'), models.DecimalField(decimal_places=2, max_digits=18)),
+                Cast(0.0, models.DecimalField(decimal_places=2, max_digits=24)),
+                output_field=models.DecimalField(decimal_places=2, max_digits=24)
+            ),
+            ratings=Coalesce(Avg('productrating__rating'), Cast(0.0, models.FloatField())),
+            rates_count=Count('productrating__rating'),
+            views=Count('productview')
+        )
 
 
 class OrderManager(SoftDeleteManager):

@@ -13,6 +13,7 @@ from faker import Faker
 from API.models import ProductCategory
 from API.models import Product
 from API.models import ProductRating
+from API.models import ProductView
 from API.models import Address
 from API.models import Order
 from API.models import OrderProductListItem
@@ -40,6 +41,12 @@ def random_postal_code():
     if '-' not in post_code:
         return f'{post_code[:2]}-{post_code[2:]}'
     return post_code
+
+
+def random_ip():
+    if random.random() < 0.5:
+        return fake.ipv4()
+    return fake.ipv6()
 
 
 class UserFactory(DjangoModelFactory):
@@ -100,7 +107,7 @@ class ProductFactory(DjangoModelFactory):
 
 
 class ProductRatingFactory(DjangoModelFactory):
-    """:model:`API.Product` factory."""
+    """:model:`API.ProductRating` factory."""
 
     class Meta:
         model = ProductRating
@@ -109,6 +116,25 @@ class ProductRatingFactory(DjangoModelFactory):
     reviewer = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_CLIENT_GROUP_NAME))
     review = factory.LazyFunction(lambda: fake.sentence(nb_words=16))
     rating = factory.LazyFunction(lambda: random.choice(RATINGS))
+
+
+class ProductViewFactory(DjangoModelFactory):
+    """:model:`API.ProductView` factory."""
+
+    class Meta:
+        model = ProductView
+
+    product = factory.Iterator(Product.objects.all().only('id'))
+    ip = factory.LazyFunction(lambda: random_ip())
+
+    @factory.post_generation
+    def add_more_views(self, create, extracted, **kwargs):
+        count = random.randint(0, 20)
+
+        if count:
+            ProductView.objects.bulk_create([
+                ProductView(product=self.product, ip=random_ip()) for _ in range(count)
+            ], batch_size=count)
 
 
 class AddressFactory(DjangoModelFactory):
