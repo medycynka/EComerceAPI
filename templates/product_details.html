@@ -15,7 +15,7 @@
         .cancel-on-png, .cancel-off-png, .star-on-png, .star-off-png, .star-half-png{
             font-size: 1em;
         }
-        .productdesc .tab-content i{
+        .productdesc .tab-content i, .productdesc li i{
             color: gold;
         }
     </style>
@@ -31,15 +31,16 @@
 {% block page_header_buttons %}
     {% if request.user|is_seller or request.user.is_superuser %}
         <div class="ms-auto pageheader-btn">
+            {% if request.user|can_see_product_stats:product_pk %}
+                <button type="button" class="btn btn-success btn-icon text-white me-2" id="productRefreshBtn">
+                    <span><i class="fe fe-refresh-cw"></i></span> Refresh Stats
+                </button>
+            {% endif %}
             <button type="button" class="btn btn-info btn-icon text-white me-2" id="productEditBtn">
-                <span>
-                    <i class="fe fe-edit"></i>
-                </span> Edit product
+                <span><i class="fe fe-edit"></i></span> Edit product
             </button>
             <button type="button" class="btn btn-danger btn-icon text-white me-2" id="productDeleteBtn">
-                <span>
-                    <i class="fe fe-trash"></i>
-                </span> Delete product
+                <span><i class="fe fe-trash"></i></span> Delete product
             </button>
         </div>
     {% endif %}
@@ -59,7 +60,8 @@
                     </div>
                     <div class="mt-4 mb-4">
                         <h3 id="productName">Lenovo Headset 330 Pentium Quad Core </h3>
-                        <h5 id="productCategory" class="mb-3 mt-2">Description</h5>
+                        <h5 id="productCategory" class="mb-3 mt-2" style="display:inline-block;"></h5>
+                        <h5 id="productPrice" class="mb-3 mt-2" style="display:inline-block;float: right"></h5>
                         <p id="productDescription"></p>
                     </div>
                     <div class="panel panel-primary">
@@ -79,23 +81,23 @@
                                     <h4 class="mb-5 mt-3">Overall</h4>
                                     <ul class="list-unstyled mb-0">
                                         <li class="row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Mark</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Mark</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">CASAMOTION</div>
                                         </li>
                                         <li class=" row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Serial number</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Serial number</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">AHLF016</div>
                                         </li>
                                         <li class="p-b-20 row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Name</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Name</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">casamotion</div>
                                         </li>
                                         <li class="p-b-20 row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Material</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Material</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">Wood</div>
                                         </li>
                                         <li class="p-b-20 row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Color</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Color</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">Brown</div>
                                         </li>
                                     </ul>
@@ -103,19 +105,19 @@
                                 <div class="tab-pane" id="tab2">
                                     <ul class="list-unstyled mb-0">
                                         <li class="row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Width</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Width</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">{% random_int 1 100 %} cm</div>
                                         </li>
                                         <li class=" row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Height</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Height</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">{% random_int 1 100 %} cm</div>
                                         </li>
                                         <li class="p-b-20 row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Depth</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Depth</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">{% random_int 1 100 %} cm</div>
                                         </li>
                                         <li class="p-b-20 row">
-                                            <div class="col-sm-3 col-lg-4 col-xl-3 text-muted">Weight</div>
+                                            <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Weight</div>
                                             <div class="col-sm-3 col-lg-8 col-xl-3">{% random_int 1 100 %} kg</div>
                                         </li>
                                     </ul>
@@ -146,6 +148,49 @@
                 </div>
             </div>
         </div>
+        {% if request.user|can_see_product_stats:product_pk %}
+            <div class="col-lg-4 col-md-12" id="productStatsContainer">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Statistics</h3>
+                    </div>
+                    <div class="card-body productdesc">
+                        <ul class="list-unstyled mb-0">
+                            <li class="row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Stock</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="stockCountContainer">-</div>
+                            </li>
+                            <li class="row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Sells</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="sellsCountContainer">-</div>
+                            </li>
+                            <li class=" row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Profits</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="profitsContainer">-</div>
+                            </li>
+                            <li class="p-b-20 row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Rates</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="ratesCountContainer">-</div>
+                            </li>
+                            <li class="p-b-20 row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Rating</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="ratingContainer">
+                                    <i class="fa fa-star-o"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <i class="fa fa-star-o"></i>
+                                    <i class="fa fa-star-o"></i>
+                                </div>
+                            </li>
+                            <li class="p-b-20 row">
+                                <div class="col-sm-4 col-lg-4 col-xl-4 text-muted">Views</div>
+                                <div class="col-sm-8 col-lg-8 col-xl-8" id="viewsCountContainer">-</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}
 {% block custom_scripts %}
@@ -384,7 +429,8 @@
                     // Details view
                     document.querySelector('a#productName').innerHTML = data.name;
                     document.querySelector('h3#productName').innerHTML = data.name;
-                    document.querySelector('h5#productCategory').innerHTML = "Kategoria: " + data.category.name;
+                    document.querySelector('h5#productCategory').innerHTML = "<b>Category:</b> " + data.category.name;
+                    document.querySelector('h5#productPrice').innerHTML = "<b>Price:</b> " + data.price + " PLN";
                     document.querySelector('p#productDescription').innerHTML = data.description;
                     document.querySelector('img#productPhoto').src = data.photo;
 
@@ -469,7 +515,6 @@
                     console.log(jqXHR, textStatus, errorThrown);
                 },
             });
-
             $.ajax({
                 url: "{% url 'api_products-ratings' pk=product_pk %}",
                 data: null,
@@ -504,6 +549,47 @@
                     console.log(jqXHR, textStatus, errorThrown);
                 },
             });
+
+            if (document.getElementById('productStatsContainer')) {
+                const refreshProductStats = () => {
+                    $.ajax({
+                        url: '{% url 'graphql_ui' %}',
+                        method: 'POST',
+                        data: JSON.stringify({query: `
+                            {
+                              productStatistic(id: {{ product_pk }}){
+                                stock
+                                sellsCount
+                                totalProfit
+                                ratings
+                                ratesCount
+                                views
+                              }
+                            }
+                        `}),
+                        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+                        contentType : 'application/json',
+                        processData : true,
+                        success: (data, textStatus, jqXHR) => {
+                            if (data?.data?.productStatistic) {
+                                document.getElementById('stockCountContainer').innerHTML = data.data.productStatistic.stock;
+                                document.getElementById('sellsCountContainer').innerHTML = data.data.productStatistic.sellsCount;
+                                document.getElementById('profitsContainer').innerHTML = Number(data.data.productStatistic.totalProfit).toFixed(2) + " PLN";
+                                document.getElementById('ratesCountContainer').innerHTML = data.data.productStatistic.ratesCount;
+                                document.getElementById('ratingContainer').innerHTML = generateStarRating(roundToStep(data.data.productStatistic.ratings).toFixed(1));
+                                document.getElementById('viewsCountContainer').innerHTML = data.data.productStatistic.views;
+                            }
+                        },
+                        error: (jqXHR, textStatus, errorThrown) => {
+                            console.log(jqXHR, textStatus, errorThrown);
+                        },
+                    });
+                }
+
+                document.getElementById('productRefreshBtn')?.addEventListener('click', refreshProductStats);
+
+                refreshProductStats();
+            }
 
             document.getElementById('addToShoppingCartBtn')?.addEventListener('click', addToShoppingCart);
         })();

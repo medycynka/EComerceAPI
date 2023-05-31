@@ -1,6 +1,7 @@
 from django.db.models import Q, Sum
 
 import graphene
+from graphql import SelectionSetNode
 
 from API.models import ProductCategory
 from API.models import Product
@@ -8,8 +9,7 @@ from API.models import Order
 from API.models import DiscountCoupon
 from API.types import ProductCategoryType
 from API.types import ProductType
-from API.types import ProductRatingType
-from API.types import ProductStatisticType
+from API.types import ProductStatisticObjectType
 from API.types import OrderType
 from API.types import SalesAndProfitsType
 from API.types import MonthlySalesAndProfitsType
@@ -17,6 +17,23 @@ from API.types import CountrySalesAndProfitsType
 from API.types import DiscountCouponType
 
 from datetime import datetime
+
+
+PRODUCT_STATS_VALID_ORDERS = {
+    'id', '-id'
+    'name', '-name',
+    'price', '-price',
+    'stock', '-stock',
+    'sells_count', '-sells_count',
+    'total_profit', '-total_profit',
+    'ratings', '-ratings',
+    'rates_count', '-rates_count',
+    'views', '-views',
+}
+
+
+def is_product_order_valid(order: str) -> bool:
+    return order in PRODUCT_STATS_VALID_ORDERS
 
 
 def get_date_range_product_filter_from_kwargs(**kwargs):
@@ -38,41 +55,36 @@ def get_date_range_product_filter_from_kwargs(**kwargs):
     return date_filter_query
 
 
+def camel_to_snake(value):
+    return ''.join(['_' + c.lower() if c.isupper() else c for c in value]).lstrip('_')
+
+
+def get_simple_query_fields(selection_set: SelectionSetNode, force_id: bool = False):
+    fields = [camel_to_snake(node.name.value) for node in selection_set.selections]
+
+    if force_id and 'id' not in fields:
+        fields.append('id')
+
+    return fields
+
+
 class APIQuery(graphene.ObjectType):
     all_categories = graphene.List(ProductCategoryType)
     category = graphene.Field(ProductCategoryType, id=graphene.ID(required=True))
     all_products = graphene.List(ProductType)
     product = graphene.Field(ProductType, id=graphene.ID(required=True))
-    top_sellers = graphene.List(ProductStatisticType,
-                                date_from=graphene.String(required=False),
-                                date_to=graphene.String(required=False)
-                                )
-    top_seller = graphene.Field(ProductStatisticType,
-                                date_from=graphene.String(required=False),
-                                date_to=graphene.String(required=False))
-    least_sellers = graphene.List(ProductStatisticType,
-                                  date_from=graphene.String(required=False),
-                                  date_to=graphene.String(required=False)
-                                  )
-    least_seller = graphene.Field(ProductStatisticType,
-                                  date_from=graphene.String(required=False),
-                                  date_to=graphene.String(required=False))
-    most_profitable = graphene.List(ProductStatisticType,
-                                    date_from=graphene.String(required=False),
-                                    date_to=graphene.String(required=False)
-                                    )
-    most_profitable_single = graphene.Field(ProductStatisticType,
-                                            date_from=graphene.String(required=False),
-                                            date_to=graphene.String(required=False))
-    least_profitable = graphene.List(ProductStatisticType,
-                                     date_from=graphene.String(required=False),
-                                     date_to=graphene.String(required=False)
-                                     )
-    least_profitable_single = graphene.Field(ProductStatisticType,
-                                             date_from=graphene.String(required=False),
-                                             date_to=graphene.String(required=False))
-    top_rated = graphene.List(ProductStatisticType, limit=graphene.Int(required=False))
-    least_rated = graphene.List(ProductStatisticType, limit=graphene.Int(required=False))
+    products_statistic = graphene.List(ProductStatisticObjectType,
+                                       date_from=graphene.String(required=False),
+                                       date_to=graphene.String(required=False),
+                                       limit=graphene.Int(required=False),
+                                       order_by=graphene.String(required=False),
+                                       )
+    product_statistic = graphene.Field(ProductStatisticObjectType,
+                                       id=graphene.ID(required=False),
+                                       date_from=graphene.String(required=False),
+                                       date_to=graphene.String(required=False),
+                                       order_by=graphene.String(required=False),
+                                       )
     all_orders = graphene.List(OrderType,
                                limit=graphene.Int(required=False),
                                date_from=graphene.String(required=False),
@@ -108,43 +120,41 @@ class APIQuery(graphene.ObjectType):
         except Product.DoesNotExist:
             return None
 
-    def resolve_top_sellers(self, info, **kwargs):
-        return Product.objects.top_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+    def resolve_products_statistic(self, info, **kwargs):
+        q = Product.objects.full_stats(get_date_range_product_filter_from_kwargs(**kwargs)).values(
+            *get_simple_query_fields(info.field_nodes[0].selection_set)
+        )
+        limit = kwargs.get('limit', -1)
+        order_by = kwargs.get('order_by', None)
 
-    def resolve_top_seller(self, info, **kwargs):
-        return Product.objects.top_sellers(
-            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
-        ).first()
+        if order_by is not None:
+            order_by = order_by.split(';')
+            order_by = [order for order in filter(is_product_order_valid, order_by)]
+            q = q.order_by(*order_by)
 
-    def resolve_least_sellers(self, info, **kwargs):
-        return Product.objects.least_sellers(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+        if limit > 0:
+            return q[:limit]
+        return q
 
-    def resolve_least_seller(self, info, **kwargs):
-        return Product.objects.least_sellers(
-            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
-        ).first()
+    def resolve_product_statistic(self, info, **kwargs):
+        product_id = kwargs.get('id', None)
+        q = Product.objects.full_stats(get_date_range_product_filter_from_kwargs(**kwargs)).values(
+            *get_simple_query_fields(info.field_nodes[0].selection_set, force_id=True)
+        )
+        order_by = kwargs.get('order_by', None)
 
-    def resolve_most_profitable(self, info, **kwargs):
-        return Product.objects.most_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
+        if order_by is not None:
+            order_by = order_by.split(';')
+            order_by = [order for order in filter(is_product_order_valid, order_by)]
+            q = q.order_by(*order_by)
 
-    def resolve_most_profitable_single(self, info, **kwargs):
-        return Product.objects.most_profitable(
-            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
-        ).first()
+        if product_id is None:
+            return q.first()
 
-    def resolve_least_profitable(self, info, **kwargs):
-        return Product.objects.least_profitable(info.context.user, get_date_range_product_filter_from_kwargs(**kwargs))
-
-    def resolve_least_profitable_single(self, info, **kwargs):
-        return Product.objects.least_profitable(
-            info.context.user, get_date_range_product_filter_from_kwargs(**kwargs)
-        ).first()
-
-    def resolve_top_rated(self, info, **kwargs):
-        return Product.objects.with_ratings().order_by('-ratings', '-rates_count')[:kwargs.get("limit", 10)]
-
-    def resolve_least_rated(self, info, **kwargs):
-        return Product.objects.with_ratings().order_by('ratings', '-rates_count')[:kwargs.get("limit", 10)]
+        try:
+            return q.get(pk=product_id)
+        except Product.DoesNotExist:
+            return None
 
     def resolve_all_orders(self, info, **kwargs):
         date_from_limit = kwargs.get("date_from", None)
