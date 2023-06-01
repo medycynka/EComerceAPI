@@ -3,18 +3,22 @@ from django.db.models import Q, Sum
 import graphene
 from graphql import SelectionSetNode
 
-from API.models import ProductCategory
-from API.models import Product
-from API.models import Order
-from API.models import DiscountCoupon
-from API.types import ProductCategoryType
-from API.types import ProductType
-from API.types import ProductStatisticObjectType
-from API.types import OrderType
-from API.types import SalesAndProfitsType
-from API.types import MonthlySalesAndProfitsType
-from API.types import CountrySalesAndProfitsType
-from API.types import DiscountCouponType
+from API.models import (
+    ProductCategory,
+    Product,
+    Order
+)
+from API.types import (
+    DiscountCoupon,
+    ProductCategoryType,
+    ProductType,
+    ProductStatisticObjectType,
+    OrderType,
+    SalesAndProfitsType,
+    MonthlySalesAndProfitsType,
+    CountrySalesAndProfitsType,
+    DiscountCouponType
+)
 
 from datetime import datetime
 
@@ -36,7 +40,7 @@ def is_product_order_valid(order: str) -> bool:
     return order in PRODUCT_STATS_VALID_ORDERS
 
 
-def get_date_range_product_filter_from_kwargs(**kwargs):
+def get_date_range_product_filter_from_kwargs(**kwargs) -> Q:
     date_from_limit = kwargs.get("date_from", None)
     date_to_limit = kwargs.get("date_to", None)
     date_filter_query = Q()
@@ -121,9 +125,13 @@ class APIQuery(graphene.ObjectType):
             return None
 
     def resolve_products_statistic(self, info, **kwargs):
-        q = Product.objects.full_stats(get_date_range_product_filter_from_kwargs(**kwargs)).values(
-            *get_simple_query_fields(info.field_nodes[0].selection_set)
-        )
+        user = info.context.user
+        filter_q = get_date_range_product_filter_from_kwargs(**kwargs)
+
+        if not user.is_superuser:
+            filter_q.add(Q(seller=user), Q.AND)
+
+        q = Product.objects.full_stats(filter_q).values(*get_simple_query_fields(info.field_nodes[0].selection_set))
         limit = kwargs.get('limit', -1)
         order_by = kwargs.get('order_by', None)
 
@@ -137,18 +145,25 @@ class APIQuery(graphene.ObjectType):
         return q
 
     def resolve_product_statistic(self, info, **kwargs):
-        product_id = kwargs.get('id', None)
-        q = Product.objects.full_stats(get_date_range_product_filter_from_kwargs(**kwargs)).values(
+        user = info.context.user
+        filter_q = get_date_range_product_filter_from_kwargs(**kwargs)
+
+        if not user.is_superuser:
+            filter_q.add(Q(seller=user), Q.AND)
+
+        q = Product.objects.full_stats(filter_q).values(
             *get_simple_query_fields(info.field_nodes[0].selection_set, force_id=True)
         )
-        order_by = kwargs.get('order_by', None)
-
-        if order_by is not None:
-            order_by = order_by.split(';')
-            order_by = [order for order in filter(is_product_order_valid, order_by)]
-            q = q.order_by(*order_by)
+        product_id = kwargs.get('id', None)
 
         if product_id is None:
+            order_by = kwargs.get('order_by', None)
+
+            if order_by is not None:
+                order_by = order_by.split(';')
+                order_by = [order for order in filter(is_product_order_valid, order_by)]
+                q = q.order_by(*order_by)
+
             return q.first()
 
         try:

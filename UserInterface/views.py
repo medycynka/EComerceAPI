@@ -1,9 +1,13 @@
-from django.shortcuts import redirect
-from django.shortcuts import render
+from django.shortcuts import (
+    redirect,
+    render
+)
 from django.views.generic import TemplateView
-from django.contrib.auth import authenticate
-from django.contrib.auth import login
-from django.contrib.auth import logout
+from django.contrib.auth import (
+    authenticate,
+    login,
+    logout
+)
 from django.conf import settings
 
 from API.models import ProductCategory

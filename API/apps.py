@@ -8,8 +8,10 @@ class ApiConfig(AppConfig):
     def ready(self):
         from django.conf import settings
         if settings.USE_ASYNC_TASK_COLLECTOR:
-            from API.async_task_collector import NotifiesClientsWithUnpaidOrdersCollector
-            from API.async_task_collector import ExpireUnpaidOrdersCollector
+            from API.async_task_collector import (
+                NotifiesClientsWithUnpaidOrdersCollector,
+                ExpireUnpaidOrdersCollector
+            )
 
             async_task_collectors = [
                 NotifiesClientsWithUnpaidOrdersCollector(),

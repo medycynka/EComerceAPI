@@ -1,11 +1,19 @@
 from django.db import models
-from django.db.models import F, Q, QuerySet, Avg, Count
+from django.db.models import (
+    F,
+    Q,
+    QuerySet,
+    Avg,
+    Count
+)
 from django.contrib.auth.models import User
-from django.db.models.functions import Coalesce
-from django.db.models.functions import Cast
-from django.db.models.functions import ExtractMonth
-from django.db.models.functions import ExtractDay
-from django.db.models.functions import ExtractYear
+from django.db.models.functions import (
+    Coalesce,
+    Cast,
+    ExtractMonth,
+    ExtractDay,
+    ExtractYear
+)
 from django.conf import settings
 from django.utils import timezone
 

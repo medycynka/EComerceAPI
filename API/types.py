@@ -5,13 +5,15 @@ from graphene_django import DjangoObjectType
 
 from django_countries.graphql.types import Country
 
-from API.models import ProductCategory
-from API.models import Product
-from API.models import ProductRating
-from API.models import Address
-from API.models import Order
-from API.models import OrderProductListItem
-from API.models import DiscountCoupon
+from API.models import (
+    ProductCategory,
+    Product,
+    ProductRating,
+    Address,
+    Order,
+    OrderProductListItem,
+    DiscountCoupon
+)
 
 
 class UserType(DjangoObjectType):

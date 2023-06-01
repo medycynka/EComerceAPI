@@ -1,9 +1,14 @@
 from django.core.files.base import ContentFile
-from django.core.validators import MinValueValidator
-from django.core.validators import MaxValueValidator
+from django.core.validators import (
+    MinValueValidator,
+    MaxValueValidator
+)
 from django.db import models
-from django.db.models import F, QuerySet
-from django.db.models import Avg
+from django.db.models import (
+    F,
+    QuerySet,
+    Avg
+)
 from django.utils import timezone
 from django.utils.text import gettext_lazy as _
 from django.conf import settings
@@ -13,9 +18,11 @@ from django_countries.fields import CountryField
 
 from mptt.models import MPTTModel, TreeForeignKey
 
-from API.managers import SoftDeleteManager
-from API.managers import ProductManager
-from API.managers import OrderManager
+from API.managers import (
+    SoftDeleteManager,
+    ProductManager,
+    OrderManager
+)
 
 from PIL import Image
 import os

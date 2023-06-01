@@ -111,7 +111,7 @@
                                 <td>${data.results[i].id}</td>
                                 <td>${data.results[i].client.username}</td>
                                 <td>${data.results[i].full_price} PLN</td>
-                                <td>${data.results[i].order_address}</td>
+                                <td>${data.results[i].order_address.short_address}</td>
                                 <td>${moment(data.results[i].order_date).format('DD-MM-YYYY')}</td>
                                 <td style="color:${currentDate.diff(moment(data.results[i].payment_deadline)) < 0 ? 'forestgreen' : 'indianred'}">${moment(data.results[i].payment_deadline).format('DD-MM-YYYY')}</td>
                                 <td>${data.results[i].is_paid ? "<i class=\"fa fa-check\" style=\"color:forestgreen;\"></i>" : "<i class=\"fa fa-remove\" style=\"color:indianred;\"></i>"}</td>

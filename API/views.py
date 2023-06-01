@@ -3,20 +3,27 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from rest_framework.generics import CreateAPIView
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import (
+    CreateAPIView,
+    ListCreateAPIView
+)
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAdminUser
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.viewsets import GenericViewSet
-from rest_framework import mixins
+from rest_framework.permissions import (
+    AllowAny,
+    IsAdminUser
+)
+from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework import (
+    mixins,
+    status
+)
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.decorators import action
 
-from API.api_permissions import AuthenticatedClientsOnly
-from API.api_permissions import AuthenticatedSellersOnly
+from API.api_permissions import (
+    AuthenticatedClientsOnly,
+    AuthenticatedSellersOnly
+)
 from API.models import ProductCategory
 from API.models import Product
 from API.models import ProductRating
@@ -24,24 +31,32 @@ from API.models import ProductView
 from API.models import Order
 from API.models import Address
 from API.models import DiscountCoupon
-from API.serializers import ProductCategorySerializer
-from API.serializers import ProductCategoryManageSerializer
-from API.serializers import ProductSerializer
-from API.serializers import ProductManageSerializer
-from API.serializers import ProductRatingSerializer
-from API.serializers import ProductRatingCreateSerializer
-from API.serializers import ProductViewSerializer
-from API.serializers import ProductTopLeastSellersSerializer
-from API.serializers import ProductTopLeastProfitableSerializer
-from API.serializers import AddressSerializer
-from API.serializers import OrderSerializer
-from API.serializers import OrderCreateSerializer
-from API.serializers import UserCreateSerializer
-from API.serializers import DiscountCouponSerializer
-from API.serializers import DiscountCouponCodesSerializer
-from API.serializers import OrderStatusExtraExplanation
-from API.filters import ProductFilter
-from API.filters import ProductStatisticsFilter
+from API.serializers import (
+    ProductCategorySerializer,
+    ProductCategoryManageSerializer,
+    ProductSerializer,
+    ProductManageSerializer,
+    ProductRatingSerializer,
+    ProductRatingCreateSerializer,
+    ProductViewSerializer,
+    ProductTopLeastSellersSerializer,
+    ProductTopLeastProfitableSerializer,
+    AddressSerializer,
+    OrderSerializer,
+    OrderCreateSerializer,
+    UserCreateSerializer,
+    DiscountCouponSerializer,
+    DiscountCouponCodesSerializer,
+    OrderStatusExtraExplanation
+)
+from API.filters import (
+    ProductFilter,
+    ProductStatisticsFilter
+)
+from API.fast_pagination import (
+    FastPageNumberPagination,
+    FastLimitOffsetPagination
+)
 
 
 class ProductCategoryModelViewSet(ModelViewSet):
@@ -72,6 +87,7 @@ class ProductModelViewSet(ModelViewSet):
     ).order_by('-pk')
     permission_classes = [AuthenticatedSellersOnly]
     filterset_class = ProductFilter
+    pagination_class = FastPageNumberPagination
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -136,6 +152,7 @@ class ProductRatingsModelViewSet(ModelViewSet):
     serializer_class = ProductRatingCreateSerializer
     queryset = ProductRating.objects.select_related('product').all()
     permission_classes = [AuthenticatedClientsOnly]
+    pagination_class = FastPageNumberPagination
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -154,7 +171,7 @@ class ProductViewModelViewSet(ModelViewSet):
     serializer_class = ProductViewSerializer
     queryset = ProductView.objects.all()
     permission_classes = [AllowAny]
-    pagination_class = LimitOffsetPagination
+    pagination_class = FastLimitOffsetPagination
 
     def get_permissions(self):
         if self.action in ['update', 'destroy', 'partial_update']:
@@ -168,6 +185,7 @@ class ProductListCreateAPIView(ListCreateAPIView):
     serializer_class = ProductManageSerializer
     queryset = Product.objects.all().order_by('-pk')
     permission_classes = [AuthenticatedSellersOnly]
+    pagination_class = FastPageNumberPagination
 
 
 class ProductStatisticsListAPIView(mixins.ListModelMixin, GenericViewSet):
@@ -175,7 +193,7 @@ class ProductStatisticsListAPIView(mixins.ListModelMixin, GenericViewSet):
     queryset = Product.objects.none()
     filterset_class = ProductStatisticsFilter
     permission_classes = [AuthenticatedSellersOnly]
-    pagination_class = LimitOffsetPagination
+    pagination_class = FastLimitOffsetPagination
 
     def get_serializer_class(self):
         if self.action in ['top_profitable', 'least_profitable']:
@@ -216,6 +234,7 @@ class AddressModelViewSet(ModelViewSet):
     serializer_class = AddressSerializer
     queryset = Address.objects.all()
     permission_classes = [AuthenticatedSellersOnly]
+    pagination_class = FastPageNumberPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -229,6 +248,7 @@ class OrderModelViewSet(ModelViewSet):
     serializer_class = OrderCreateSerializer
     queryset = Order.objects.all()
     permission_classes = [AuthenticatedClientsOnly]
+    pagination_class = FastPageNumberPagination
 
     def get_serializer_class(self):
         is_custom_action = self.action not in ['list', 'create', 'retrieve', 'update', 'partial_update', 'destroy']
@@ -464,6 +484,7 @@ class DiscountCouponModelViewSet(ModelViewSet):
     serializer_class = DiscountCouponSerializer
     queryset = DiscountCoupon.objects.all()
     permission_classes = [AuthenticatedClientsOnly]
+    pagination_class = FastPageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'check_if_valid':

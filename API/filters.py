@@ -5,8 +5,10 @@ from django.db.models import Q
 import django_filters
 from django_filters import rest_framework as filters
 
-from API.models import ProductCategory
-from API.models import Product
+from API.models import (
+    ProductCategory,
+    Product
+)
 
 
 class ProductFilter(filters.FilterSet):

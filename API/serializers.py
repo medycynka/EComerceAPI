@@ -9,14 +9,16 @@ from rest_framework.serializers import ModelSerializer
 
 from django_countries.serializer_fields import CountryField
 
-from API.models import ProductCategory
-from API.models import Product
-from API.models import ProductRating
-from API.models import ProductView
-from API.models import Address
-from API.models import Order
-from API.models import OrderProductListItem
-from API.models import DiscountCoupon
+from API.models import (
+    ProductCategory,
+    Product,
+    ProductRating,
+    ProductView,
+    Address,
+    Order,
+    OrderProductListItem,
+    DiscountCoupon
+)
 
 
 # region Utility serializers

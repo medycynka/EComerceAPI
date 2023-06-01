@@ -893,21 +893,21 @@
                     const recentOrders = data.data.allOrders;
                     const bigNumbersFormatter = new Intl.NumberFormat('en', {notation: 'compact', compactDisplay: 'short'});
 
-                    for (let i = 0; i < recentOrders.length; i++) {
-                        recentOrdersTable.appendChild($(
+                    recentOrdersTable.replaceChildren(...recentOrders.map((order) => {
+                        return $(
                             `
                                 <tr>
-                                    <td>${recentOrders[i].id}</td>
-                                    <td>${recentOrders[i].client.email}</td>
-                                    <td>${bigNumbersFormatter.format(recentOrders[i].fullPrice)} PLN</td>
-                                    <td>${(recentOrders[i].discount * 100).toFixed(0)}%</td>
-                                    <td>${bigNumbersFormatter.format(recentOrders[i].finalPrice)} PLN</td>
-                                    <td>${recentOrders[i].statusName}</td>
-                                    <td>${moment(recentOrders[i].orderDate).format('DD-MM-YYYY hh:mm:ss')}</td>
+                                    <td>${order.id}</td>
+                                    <td>${order.client.email}</td>
+                                    <td>${bigNumbersFormatter.format(order.fullPrice)} PLN</td>
+                                    <td>${(order.discount * 100).toFixed(0)}%</td>
+                                    <td>${bigNumbersFormatter.format(order.finalPrice)} PLN</td>
+                                    <td>${order.statusName}</td>
+                                    <td>${moment(order.orderDate).format('DD-MM-YYYY hh:mm:ss')}</td>
                                 </tr>
                             `
-                        )[0]);
-                    }
+                        )[0]
+                    }));
                 });
                 getAPIData("{% url 'graphql_ui' %}", "POST", JSON.stringify({query: topRatedQuery}), (data) => {
                     if (data.data.productsStatistic.length > 0) {

@@ -1,13 +1,17 @@
 from django.contrib import admin
 
-from mptt.admin import MPTTModelAdmin
-from mptt.admin import TreeRelatedFieldListFilter
+from mptt.admin import (
+    MPTTModelAdmin,
+    TreeRelatedFieldListFilter
+)
 
-from API.models import ProductCategory
-from API.models import Product
-from API.models import Address
-from API.models import Order
-from API.models import OrderProductListItem
+from API.models import (
+    ProductCategory,
+    Product,
+    Address,
+    Order,
+    OrderProductListItem
+)
 
 import random
 

@@ -10,20 +10,27 @@ import factory
 from factory.django import DjangoModelFactory
 from faker import Faker
 
-from API.models import ProductCategory
-from API.models import Product
-from API.models import ProductRating
-from API.models import ProductView
-from API.models import Address
-from API.models import Order
-from API.models import OrderProductListItem
-from API.models import DiscountCoupon
+from API.models import (
+    ProductCategory,
+    Product,
+    ProductRating,
+    ProductView,
+    Address,
+    Order,
+    OrderProductListItem,
+    DiscountCoupon
+)
 
 import random
-from datetime import datetime, timedelta
+from datetime import (
+    datetime,
+    timedelta
+)
 from decimal import Decimal
-from string import ascii_letters, digits
-
+from string import (
+    ascii_letters,
+    digits
+)
 
 fake = Faker(settings.LANGUAGE_CODE)
 
@@ -113,7 +120,8 @@ class ProductRatingFactory(DjangoModelFactory):
         model = ProductRating
 
     product = factory.Iterator(Product.objects.all().only('id'))
-    reviewer = factory.Iterator(get_user_model().objects.filter(groups__name__icontains=settings.USER_CLIENT_GROUP_NAME))
+    reviewer = factory.Iterator(
+        get_user_model().objects.filter(groups__name__icontains=settings.USER_CLIENT_GROUP_NAME))
     review = factory.LazyFunction(lambda: fake.sentence(nb_words=16))
     rating = factory.LazyFunction(lambda: random.choice(RATINGS))
 
